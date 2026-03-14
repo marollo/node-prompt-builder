@@ -1,0 +1,17 @@
+# Dependencies — installed locally, never committed
+node_modules/
+
+# Vite build output — generated on demand, not source code
+dist/
+
+# Environment variables — may contain API keys
+.env
+.env.local
+.env.*.local
+
+# macOS folder metadata
+.DS_Store
+
+# Editor folders
+.vscode/
+.idea/

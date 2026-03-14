@@ -1,0 +1,154 @@
+{
+  "meta": {
+    "title": "Image Ad Formats Reference",
+    "description": "Standard image-only ad formats for display, social media, email, and web. Excludes text-only and video formats.",
+    "total_formats": 81,
+    "clusters": 12
+  },
+  "clusters": [
+    {
+      "cluster": "Display Ads – Leaderboard & Horizontal",
+      "formats": [
+        { "name": "Leaderboard", "width": 728, "height": 90, "ratio": "728:90", "platform": "Web Display", "use_case": "Top/bottom of webpage" },
+        { "name": "Super Leaderboard / Billboard", "width": 970, "height": 90, "ratio": "970:90", "platform": "Web Display", "use_case": "Premium placements above fold" },
+        { "name": "Full Banner", "width": 468, "height": 60, "ratio": "468:60", "platform": "Web Display", "use_case": "Legacy web placements" },
+        { "name": "Half Banner", "width": 234, "height": 60, "ratio": "234:60", "platform": "Web Display", "use_case": "Sidebars, older sites" }
+      ]
+    },
+    {
+      "cluster": "Display Ads – Rectangle & Square",
+      "formats": [
+        { "name": "Medium Rectangle", "width": 300, "height": 250, "ratio": "6:5", "platform": "Web Display", "use_case": "Most common, sidebar & in-feed" },
+        { "name": "Large Rectangle", "width": 336, "height": 280, "ratio": "6:5", "platform": "Web Display", "use_case": "In-content, high CTR" },
+        { "name": "Small Square", "width": 200, "height": 200, "ratio": "1:1", "platform": "Web Display", "use_case": "Compact placements" },
+        { "name": "Square", "width": 250, "height": 250, "ratio": "1:1", "platform": "Web Display", "use_case": "Flexible placements" },
+        { "name": "Large Square", "width": 300, "height": 250, "ratio": "1:1", "platform": "Web Display", "use_case": "High visibility inline" }
+      ]
+    },
+    {
+      "cluster": "Display Ads – Skyscraper & Vertical",
+      "formats": [
+        { "name": "Wide Skyscraper", "width": 160, "height": 600, "ratio": "4:15", "platform": "Web Display", "use_case": "Right sidebar, sticky scroll" },
+        { "name": "Skyscraper", "width": 120, "height": 600, "ratio": "1:5", "platform": "Web Display", "use_case": "Narrow sidebar" },
+        { "name": "Half Page / Large Skyscraper", "width": 300, "height": 600, "ratio": "1:2", "platform": "Web Display", "use_case": "Premium placements" },
+        { "name": "Portrait", "width": 300, "height": 1050, "ratio": "2:7", "platform": "Web Display", "use_case": "Immersive vertical display" }
+      ]
+    },
+    {
+      "cluster": "Display Ads – Mobile",
+      "formats": [
+        { "name": "Mobile Banner", "width": 320, "height": 50, "ratio": "32:5", "platform": "Mobile Display", "use_case": "Standard mobile bottom bar" },
+        { "name": "Mobile Leaderboard", "width": 320, "height": 100, "ratio": "16:5", "platform": "Mobile Display", "use_case": "Top/bottom mobile placement" },
+        { "name": "Mobile Interstitial", "width": 320, "height": 480, "ratio": "2:3", "platform": "Mobile Display", "use_case": "Full-screen between content" },
+        { "name": "Mobile Large Interstitial", "width": 640, "height": 480, "ratio": "4:3", "platform": "Mobile / Tablet", "use_case": "Tablet full-screen interstitial" },
+        { "name": "Adhesion / Anchor", "width": 320, "height": 50, "ratio": "32:5", "platform": "Mobile Display", "use_case": "Sticky bottom mobile unit" }
+      ]
+    },
+    {
+      "cluster": "Facebook & Instagram",
+      "formats": [
+        { "name": "Feed Square", "width": 1080, "height": 1080, "ratio": "1:1", "platform": "Facebook / Instagram", "use_case": "Feed posts and ads" },
+        { "name": "Feed Landscape", "width": 1200, "height": 628, "ratio": "1.91:1", "platform": "Facebook", "use_case": "Feed ad, link preview" },
+        { "name": "Feed Portrait", "width": 1080, "height": 1350, "ratio": "4:5", "platform": "Facebook / Instagram", "use_case": "Most screen real estate in feed" },
+        { "name": "Story Image", "width": 1080, "height": 1920, "ratio": "9:16", "platform": "Facebook / Instagram", "use_case": "Full-screen vertical story ad" },
+        { "name": "Carousel Card", "width": 1080, "height": 1080, "ratio": "1:1", "platform": "Facebook / Instagram", "use_case": "Swipeable multi-image ads" },
+        { "name": "Collection Cover", "width": 1200, "height": 628, "ratio": "1.91:1", "platform": "Facebook", "use_case": "Catalog collection ads" },
+        { "name": "Right Column", "width": 1200, "height": 1200, "ratio": "1:1", "platform": "Facebook", "use_case": "Desktop sidebar ad unit" },
+        { "name": "Marketplace Ad", "width": 1200, "height": 628, "ratio": "1.91:1", "platform": "Facebook", "use_case": "Facebook Marketplace placement" },
+        { "name": "Instagram Explore", "width": 1080, "height": 1080, "ratio": "1:1", "platform": "Instagram", "use_case": "Explore tab sponsored post" },
+        { "name": "Instagram Landscape Post", "width": 1080, "height": 566, "ratio": "1.91:1", "platform": "Instagram", "use_case": "Wide feed post / ad" }
+      ]
+    },
+    {
+      "cluster": "LinkedIn",
+      "formats": [
+        { "name": "Sponsored Content – Landscape", "width": 1200, "height": 627, "ratio": "1.91:1", "platform": "LinkedIn", "use_case": "Feed ad, desktop & mobile" },
+        { "name": "Sponsored Content – Square", "width": 1200, "height": 1200, "ratio": "1:1", "platform": "LinkedIn", "use_case": "Feed ad, high mobile visibility" },
+        { "name": "Sponsored Content – Vertical", "width": 627, "height": 1200, "ratio": "9:16", "platform": "LinkedIn", "use_case": "Mobile-first vertical feed" },
+        { "name": "Carousel Card", "width": 1080, "height": 1080, "ratio": "1:1", "platform": "LinkedIn", "use_case": "Multi-card swipe ads" },
+        { "name": "Dynamic Ad / Text Ad Image", "width": 100, "height": 100, "ratio": "1:1", "platform": "LinkedIn", "use_case": "Right-rail small ad unit" },
+        { "name": "Spotlight Ad Logo", "width": 100, "height": 100, "ratio": "1:1", "platform": "LinkedIn", "use_case": "Right-rail spotlight unit" },
+        { "name": "Message Ad Banner", "width": 300, "height": 250, "ratio": "6:5", "platform": "LinkedIn", "use_case": "Banner inside InMail message" }
+      ]
+    },
+    {
+      "cluster": "X / Twitter",
+      "formats": [
+        { "name": "Promoted Tweet – Landscape", "width": 1200, "height": 675, "ratio": "16:9", "platform": "X / Twitter", "use_case": "In-feed promoted tweet" },
+        { "name": "Promoted Tweet – Square", "width": 1200, "height": 1200, "ratio": "1:1", "platform": "X / Twitter", "use_case": "In-feed square promoted" },
+        { "name": "App Card Image", "width": 800, "height": 418, "ratio": "1.91:1", "platform": "X / Twitter", "use_case": "App install promoted cards" },
+        { "name": "Carousel Card", "width": 800, "height": 418, "ratio": "1.91:1", "platform": "X / Twitter", "use_case": "Swipeable promoted cards" },
+        { "name": "Direct Message Card", "width": 800, "height": 418, "ratio": "1.91:1", "platform": "X / Twitter", "use_case": "Promoted DM inbox ad" }
+      ]
+    },
+    {
+      "cluster": "TikTok",
+      "formats": [
+        { "name": "In-Feed Image Ad", "width": 1080, "height": 1920, "ratio": "9:16", "platform": "TikTok", "use_case": "Full-screen vertical in feed" },
+        { "name": "TopView Static", "width": 1080, "height": 1920, "ratio": "9:16", "platform": "TikTok", "use_case": "First ad shown on app open" },
+        { "name": "Brand Takeover Image", "width": 1080, "height": 1920, "ratio": "9:16", "platform": "TikTok", "use_case": "Full-screen immediate impact" },
+        { "name": "Collection Ad Cover", "width": 1200, "height": 628, "ratio": "1.91:1", "platform": "TikTok", "use_case": "Shopping catalog entry" }
+      ]
+    },
+    {
+      "cluster": "Pinterest",
+      "formats": [
+        { "name": "Standard Pin", "width": 1000, "height": 1500, "ratio": "2:3", "platform": "Pinterest", "use_case": "Feed pin, recommended ratio" },
+        { "name": "Square Pin", "width": 1000, "height": 1000, "ratio": "1:1", "platform": "Pinterest", "use_case": "Grid-friendly format" },
+        { "name": "Long Pin / Infographic", "width": 1000, "height": 2100, "ratio": "1:2.1", "platform": "Pinterest", "use_case": "Infographics, recipes, how-tos" },
+        { "name": "Story / Idea Pin", "width": 1080, "height": 1920, "ratio": "9:16", "platform": "Pinterest", "use_case": "Full vertical idea pins" },
+        { "name": "Shopping Ad", "width": 1000, "height": 1500, "ratio": "2:3", "platform": "Pinterest", "use_case": "Product catalog pins" }
+      ]
+    },
+    {
+      "cluster": "Snapchat",
+      "formats": [
+        { "name": "Snap Ad – Image", "width": 1080, "height": 1920, "ratio": "9:16", "platform": "Snapchat", "use_case": "Full-screen vertical story ad" },
+        { "name": "Collection Ad", "width": 1080, "height": 1920, "ratio": "9:16", "platform": "Snapchat", "use_case": "Shoppable story format" },
+        { "name": "Dynamic Ad", "width": 1080, "height": 1920, "ratio": "9:16", "platform": "Snapchat", "use_case": "Catalog-driven auto-generated" },
+        { "name": "Filter", "width": 1080, "height": 2340, "ratio": "9:19.5", "platform": "Snapchat", "use_case": "Overlay filter on snaps" }
+      ]
+    },
+    {
+      "cluster": "Email & Newsletter Banners",
+      "formats": [
+        { "name": "Email Header Banner", "width": 600, "height": 200, "ratio": "3:1", "platform": "Email", "use_case": "Top of email newsletter" },
+        { "name": "Email Hero Image", "width": 600, "height": 300, "ratio": "2:1", "platform": "Email", "use_case": "Prominent email hero section" },
+        { "name": "Email Footer Banner", "width": 600, "height": 100, "ratio": "6:1", "platform": "Email", "use_case": "Bottom of email" },
+        { "name": "Email Square Image", "width": 600, "height": 600, "ratio": "1:1", "platform": "Email", "use_case": "Product feature block in email" },
+        { "name": "Email Thumbnail", "width": 165, "height": 165, "ratio": "1:1", "platform": "Email", "use_case": "Small product image in email" }
+      ]
+    },
+    {
+      "cluster": "Website Banners",
+      "formats": [
+        { "name": "Homepage Hero – Full Width", "width": 1920, "height": 1080, "ratio": "16:9", "platform": "Website", "use_case": "Full-width website header" },
+        { "name": "Homepage Hero – Standard", "width": 1440, "height": 600, "ratio": "12:5", "platform": "Website", "use_case": "Standard hero banner" },
+        { "name": "Blog / Article Header", "width": 1200, "height": 630, "ratio": "1.91:1", "platform": "Website", "use_case": "Blog article header image" },
+        { "name": "OG / Social Preview Image", "width": 1200, "height": 630, "ratio": "1.91:1", "platform": "Website / Social", "use_case": "Link unfurl preview on social" },
+        { "name": "Pop-up / Modal Banner", "width": 600, "height": 400, "ratio": "3:2", "platform": "Website", "use_case": "On-site modal overlay" },
+        { "name": "Sticky Footer Bar", "width": 1440, "height": 80, "ratio": "18:1", "platform": "Website", "use_case": "Fixed bottom site bar" },
+        { "name": "Sidebar Banner", "width": 300, "height": 600, "ratio": "1:2", "platform": "Website", "use_case": "Right/left sidebar ad" },
+        { "name": "In-Content Banner", "width": 728, "height": 90, "ratio": "728:90", "platform": "Website", "use_case": "Inline within article content" }
+      ]
+    },
+    {
+      "cluster": "Google Display Network (GDN) Image Ads",
+      "formats": [
+        { "name": "Small Square", "width": 200, "height": 200, "ratio": "1:1", "platform": "GDN", "use_case": "Compact GDN placement" },
+        { "name": "Square", "width": 250, "height": 250, "ratio": "1:1", "platform": "GDN", "use_case": "Flexible GDN placement" },
+        { "name": "Banner", "width": 468, "height": 60, "ratio": "468:60", "platform": "GDN", "use_case": "Standard banner GDN" },
+        { "name": "Leaderboard", "width": 728, "height": 90, "ratio": "728:90", "platform": "GDN", "use_case": "Top/bottom GDN placement" },
+        { "name": "Inline Rectangle", "width": 300, "height": 250, "ratio": "6:5", "platform": "GDN", "use_case": "Highest performing GDN unit" },
+        { "name": "Large Rectangle", "width": 336, "height": 280, "ratio": "6:5", "platform": "GDN", "use_case": "In-content GDN" },
+        { "name": "Skyscraper", "width": 120, "height": 600, "ratio": "1:5", "platform": "GDN", "use_case": "Sidebar GDN" },
+        { "name": "Wide Skyscraper", "width": 160, "height": 600, "ratio": "4:15", "platform": "GDN", "use_case": "Right sidebar GDN" },
+        { "name": "Half Page", "width": 300, "height": 600, "ratio": "1:2", "platform": "GDN", "use_case": "Premium GDN" },
+        { "name": "Large Leaderboard", "width": 970, "height": 90, "ratio": "970:90", "platform": "GDN", "use_case": "Premium above-fold GDN" },
+        { "name": "Billboard", "width": 970, "height": 250, "ratio": "3.88:1", "platform": "GDN", "use_case": "Large format GDN" },
+        { "name": "Portrait", "width": 300, "height": 1050, "ratio": "2:7", "platform": "GDN", "use_case": "Tall immersive GDN" },
+        { "name": "Shopping / Product Image", "width": 800, "height": 800, "ratio": "1:1", "platform": "Google Shopping", "use_case": "Product listing image" }
+      ]
+    }
+  ]
+}

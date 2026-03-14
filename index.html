@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Node Prompt Builder</title>
+    <!-- LiteGraph built-in styles — required for menus, dialogs, and search box -->
+    <link rel="stylesheet" href="/node_modules/litegraph.js/css/litegraph.css" />
+    <!-- Load our stylesheet — must come after LiteGraph so our overrides take effect -->
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <!-- The canvas LiteGraph draws the node graph onto -->
+    <canvas id="graph-canvas"></canvas>
+
+    <!-- Load our JavaScript as a module so we can use import/export -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

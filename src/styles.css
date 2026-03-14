@@ -1,0 +1,458 @@
+/* ─── Full-window layout ──────────────────────────────────────────────────────
+   Makes the body fill the entire browser window with no scrollbars.
+   Without this the canvas would shrink to a tiny default size.
+   ─────────────────────────────────────────────────────────────────────────── */
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  /* Dark background so the log bar area is not white before the first log() call */
+  background: #111;
+}
+
+/* ─── Canvas ──────────────────────────────────────────────────────────────────
+   The LiteGraph canvas must fill the full window so the graph is usable.
+   ─────────────────────────────────────────────────────────────────────────── */
+#graph-canvas {
+  display: block;
+  width: 100%;
+  /* Must match the pixel height set in canvas.js (window.innerHeight - 80).
+     If these differ the browser stretches the canvas and LiteGraph maps
+     mouse clicks to the wrong coordinates. */
+  height: calc(100vh - 80px);
+}
+
+/* ─── Properties side panel ──────────────────────────────────────────────────
+   The floating panel that appears on the right when a node's Edit button
+   is clicked. Shows text fields as proper multi-line textareas.
+   ─────────────────────────────────────────────────────────────────────────── */
+#properties-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100vh;
+  background: #1e1e1e;
+  border-left: 1px solid #3a3a3a;
+  display: none;
+  flex-direction: column;
+  padding: 20px 16px;
+  gap: 12px;
+  z-index: 100;
+  font-family: sans-serif;
+  overflow-y: auto;
+}
+
+#properties-panel-title {
+  color: #e0e0e0;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+#properties-panel-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#properties-panel-close:hover { color: #e0e0e0; }
+
+/* Each field label above its textarea */
+#properties-panel-content label {
+  display: block;
+  color: #aaa;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+/* The editable textarea for each text field */
+#properties-panel-content textarea {
+  display: block;
+  width: 100%;
+  min-height: 100px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #f0f0f0;
+  font-size: 13px;
+  font-family: sans-serif;
+  padding: 8px;
+  resize: vertical;
+  outline: none;
+  margin-bottom: 12px;
+}
+
+#properties-panel-content textarea:focus { border-color: #666; }
+
+/* Read-only textarea — for assembled output */
+#properties-panel-content textarea.readonly {
+  color: #aaa;
+  cursor: default;
+}
+
+/* ─── Reference image section ────────────────────────────────────────────────
+   The image upload area that appears at the bottom of the properties panel.
+   ─────────────────────────────────────────────────────────────────────────── */
+.image-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* One row per uploaded image — thumbnail on the left, controls on the right */
+.image-slot {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+/* Fixed-size thumbnail preview of the uploaded image */
+.image-thumb {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* Stacks the type dropdown and remove button on top of each other */
+.image-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+/* Dropdown for choosing what role this image plays */
+.image-type-select {
+  background: #1e1e1e;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 12px;
+  padding: 4px 6px;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* Text input below each thumbnail — lets the user label what the image is for */
+.image-label-input {
+  width: 100%;
+  background: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  font-size: 11px;
+  padding: 4px 6px;
+  margin-top: 4px;
+}
+
+.image-label-input:focus {
+  outline: none;
+  border-color: #2dd4bf;
+}
+
+/* The ✕ button that removes a single image slot */
+.image-remove-btn {
+  background: none;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #888;
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.image-remove-btn:hover { color: #f43f5e; border-color: #f43f5e; }
+
+/* The "+ Add image" button shown below the slots */
+.add-image-btn {
+  background: none;
+  border: 1px dashed #555;
+  border-radius: 4px;
+  color: #aaa;
+  font-size: 12px;
+  padding: 8px;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+}
+
+.add-image-btn:hover { border-color: #888; color: #e0e0e0; }
+
+/* ─── Dialog label fix ────────────────────────────────────────────────────────
+   LiteGraph sets a dark background on the edit dialog but never sets a text
+   color on the label — the browser defaults it to black, making it invisible.
+   This forces it to white so it is readable.
+   ─────────────────────────────────────────────────────────────────────────── */
+.graphdialog .name {
+  color: white;
+  font-family: sans-serif;
+}
+
+/* ─── Output node side panel — API Settings section ──────────────────────────
+   Shown inside the properties panel when the Output node is opened.
+   Contains the Model selector, URL override, and API key.
+   ─────────────────────────────────────────────────────────────────────────── */
+.api-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #333;
+  margin-top: 4px;
+}
+
+/* Bold grey section heading — "API Settings" and "Cost & Generate" */
+.panel-section-title {
+  color: #888;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: sans-serif;
+}
+
+/* Label wrapper — stacks the label text above its input */
+.panel-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #aaa;
+  font-size: 12px;
+  font-family: sans-serif;
+}
+
+/* Shared input style for text, password, select, and number fields */
+.panel-input {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 12px;
+  padding: 6px 8px;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.panel-input:focus { border-color: #666; }
+
+/* Short number input — used for budget and cooldown */
+.panel-input--short {
+  width: 72px;
+}
+
+/* Muted "(optional)" hint beside a label */
+.panel-optional {
+  color: #555;
+  font-size: 11px;
+}
+
+/* ─── Output node side panel — Cost & Generate section ───────────────────────
+   Budget, cooldown, stats, and the Generate button.
+   ─────────────────────────────────────────────────────────────────────────── */
+#cost-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #333;
+  margin-top: 4px;
+}
+
+/* Row that holds Budget and Cooldown inputs side by side */
+.cost-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Row that holds the Spent / Est / Requests read-only stats */
+.cost-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Individual "Spent: $0.00" label */
+.cost-stat {
+  color: #aaa;
+  font-size: 12px;
+  font-family: sans-serif;
+  white-space: nowrap;
+}
+
+.cost-stat strong { color: #e0e0e0; }
+
+/* Secondary (grey) button — used for Reset session */
+.panel-btn {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #aaa;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.panel-btn:hover { background: #444; color: #e0e0e0; }
+
+/* The main Generate button — full width, prominent blue */
+.panel-generate-btn {
+  width: 100%;
+  background: #4a90e2;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.panel-generate-btn:hover { background: #357abd; }
+.panel-generate-btn:disabled { background: #2a4a70; color: #888; cursor: default; }
+
+/* ─── Generated image modal overlay ──────────────────────────────────────────
+   Full-screen dark backdrop with the image centred inside a box.
+   Clicking the backdrop or the ✕ button closes it.
+   ─────────────────────────────────────────────────────────────────────────── */
+#image-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+
+#image-modal-box {
+  position: relative;
+  background: #1a1a1a;
+  border-radius: 8px;
+  border: 1px solid #333;
+  overflow: hidden;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Toolbar row — holds only the close button */
+#image-modal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  background: #111;
+  border-bottom: 1px solid #333;
+}
+
+#image-modal-close {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+#image-modal-close:hover {
+  color: #fff;
+}
+
+/* Grid that holds all generated images — wraps into columns automatically */
+#image-modal-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+  max-height: calc(90vh - 48px);
+  justify-content: center;
+}
+
+/* One block per image — thumbnail stacked above its open link */
+.image-modal-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Each thumbnail — sized so up to 4 fit side by side */
+.image-modal-thumb {
+  display: block;
+  max-width: 38vw;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* "Open full size" link below each thumbnail */
+.image-modal-link {
+  color: #2dd4bf;
+  font-size: 12px;
+  font-family: sans-serif;
+  text-decoration: none;
+}
+
+.image-modal-link:hover {
+  text-decoration: underline;
+}
+
+/* ─── Log bar ─────────────────────────────────────────────────────────────────
+   Fixed strip at the bottom of the window.
+   Shows API responses and application errors as they happen.
+   Height must match the 80px subtracted from the canvas in canvas.js.
+   ─────────────────────────────────────────────────────────────────────────── */
+#log-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: #111;
+  border-top: 1px solid #2a2a2a;
+  padding: 6px 12px;
+  overflow: hidden;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* One line per log entry */
+.log-entry {
+  font-size: 11px;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.5;
+}
+
+/* Colour variants — green for success, red for errors, grey for info */
+.log-entry--success { color: #22c55e; }
+.log-entry--error   { color: #f43f5e; }
+.log-entry--info    { color: #666;    }
