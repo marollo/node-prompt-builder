@@ -8,8 +8,9 @@ This document is a plain English map of the codebase. It is updated after every 
 
 - A dark LiteGraph canvas fills the full browser window
 - Two nodes appear on the canvas at startup: **Prompt Assembler** and **NB2 Model**
-- Seven node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, NB2 Model — LiteGraph's built-in nodes are hidden
-- The graph flow is: content nodes → Prompt Assembler → NB2 Model → API → image modal
+- Eight node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model — LiteGraph's built-in nodes are hidden
+- Standard flow: content nodes → Prompt Assembler → NB2 Model → API → image modal
+- Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
 
 **Prompt Assembler node**
 - Has five fixed input slots in Google framework order: Subject, Location, Camera, Lighting, Style
@@ -20,10 +21,20 @@ This document is a plain English map of the codebase. It is updated after every 
 **NB2 Model node**
 - Has one input slot that receives the prompt string from the Prompt Assembler
 - Canvas widgets: Aspect Ratio, Images, Output Format, Resolution, Safety, API Key
+- The Aspect Ratio widget is automatically disabled (greyed out, unclickable) when an Ad Format node is connected upstream with at least one format selected — because the ratio is then controlled per-format during batch generation
 - "Generate" button triggers image generation
 - "Cost Settings" button opens the side panel with Budget and Cooldown inputs
 - Bottom of the node shows three live stats drawn directly on the canvas: Spent / Est. / Req
+- The Est. figure multiplies the base cost by the number of selected formats when an Ad Format node is connected — so the user sees the total expected spend for the whole batch before clicking Generate
 - All generation state (API key, params, format) is pushed into `apiClient.js` on every tick
+
+**Ad Format node** *(optional — insert between Prompt Assembler and NB2 Model for batch generation)*
+- Has one input slot (Prompt) and one output slot (Prompt) — passes the prompt straight through
+- "Select Formats" button opens the side panel showing 33 NB2-compatible ad formats grouped by platform
+- Each format shows its name and exact aspect ratio (e.g. `9:16`, `4:5`)
+- Ticking multiple formats enables batch mode — when Generate is clicked on NB2, one image is generated per selected format
+- Selected count is drawn at the bottom of the node (green when formats are active)
+- Clears its format list from `apiClient.js` when removed from the canvas
 
 **Shared behaviour**
 - The assembled prompt uses sentence structure: each node's contribution is a separate clause capitalised at the start, joined with `". "`
@@ -31,6 +42,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - Each reference image has its own editable label below the thumbnail (defaults to the node's role)
 - The software automatically picks text-to-image or image editing mode based on whether reference images exist
 - When multiple images are generated the modal shows them all in a grid, each with an "Open full size" link
+- In batch mode each image is labeled with the format name and pixel dimensions (e.g. "Story Image · 1080×1920")
 - Context Control is currently disabled — each generation is always independent (mode locked to Open)
 - A log bar runs across the bottom of the window showing API responses and errors with timestamps
 
@@ -49,6 +61,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   ├── nodes/
 │   │   ├── PromptAssemblerNode.js    ← Collects connected nodes and assembles the prompt — BUILT
 │   │   ├── NB2ModelNode.js           ← Receives prompt, sends it to fal.ai Nano Banana 2 — BUILT
+│   │   ├── AdFormatNode.js           ← Optional batch node — selects ad formats, triggers multi-format generation — BUILT
 │   │   ├── SubjectNode.js            ← Describes the image subject — BUILT
 │   │   ├── LocationNode.js           ← Describes the environment — BUILT
 │   │   ├── CameraNode.js             ← Controls camera angle and lens — BUILT
@@ -57,7 +70,8 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   └── ReferenceImageNode.js     ← Standalone reference image node — placeholder (not built)
 │   ├── panel/
 │   │   ├── PropertiesPanel.js        ← Side panel for editing node text fields and images — BUILT
-│   │   ├── ImageModal.js             ← Full-screen overlay showing generated images — BUILT
+│   │   ├── AdFormatPanel.js          ← Checkbox panel for selecting ad formats grouped by platform — BUILT
+│   │   ├── ImageModal.js             ← Full-screen overlay showing generated images with optional labels — BUILT
 │   │   ├── LogPanel.js               ← Fixed bottom bar showing API responses and errors — BUILT
 │   │   ├── CostPanel.js              ← Cost and budget UI — placeholder
 │   │   └── ContextPanel.js           ← Context mode UI — placeholder
@@ -131,24 +145,28 @@ This document is a plain English map of the codebase. It is updated after every 
 3. Because the node title is "NB2 Model", the panel builds the Cost Settings section via `initCostUI()`
 4. The Generate button in the panel is wired to `generate()` in `apiClient.js`
 
-### When the user clicks Generate
+### When the user clicks Generate (single mode — no Ad Format node)
 
-1. The Generate button in the NB2 Model side panel is clicked
-2. It calls `generate()` in `apiClient.js`
-3. `generate()` first calls `canGenerate()` from `CostControl.js` — stops if cooldown is active or budget is reached
-4. If the prompt is still the placeholder text, stops with "No prompt yet"
-5. The stored `_apiKey` and `_format` variables (set each tick by NB2ModelNode's `onExecute`) are used directly — no DOM reads needed
-6. If model is `Nano Banana 2`: `buildRequest()` from `falai.js` is called with the prompt, params, and `_referenceImages`
-   - If `_referenceImages` has entries → uses the `/edit` endpoint, adds `image_urls` to the body
-   - If no reference images → uses the standard text-to-image endpoint
-7. If model is `Generic REST`: `buildRequest()` from `genericRest.js` shapes a simple `{ "prompt": "..." }` body
-8. `fetch(url, options)` sends the POST request
-9. On success:
-    - `parseFalaiResponse(data)` extracts all image URLs as an array
-    - `showImage(imageUrls)` opens the modal overlay with a grid of all images
-    - `addSpent(calculateCost(params))` updates cumulative spend
-    - `recordGeneration()` increments the counter and starts the cooldown
-10. Errors show on the button; CORS errors are detected and explained in the console
+1. The Generate button on the NB2 Model node (or its side panel) is clicked
+2. `generate()` in `apiClient.js` checks budget/cooldown and prompt validity
+3. `_selectedFormats` is empty — so `_generateSingle()` is called
+4. The request is built using `_apiKey`, `_format`, `_generationParams`, and `_referenceImages`
+5. `fetch()` sends the POST request; on success `showImage()` opens the modal with all returned images as `{url, label: null}` objects
+6. Cost and request count are recorded
+
+### When the user clicks Generate (batch mode — Ad Format node connected with formats selected)
+
+1. The Generate button on the NB2 Model node is clicked
+2. `generate()` checks budget/cooldown and prompt validity
+3. `_selectedFormats` is non-empty — so `_generateBatch()` is called
+4. The loop iterates through each selected format one at a time:
+   - The button label updates to show progress: `1 / 5…`, `2 / 5…` etc.
+   - The log bar shows `Generating N/total — Format Name (ratio)`
+   - The request is built with `aspectRatio` overridden to the format's exact ratio
+   - The response is collected as `{ url, label: "Format Name · W×H" }`
+   - If one format fails, the loop continues with the next
+5. After all formats are processed, `showImage(results)` opens the modal with all images labeled by format
+6. The log bar shows a final summary: `Batch complete — N of total succeeded`
 
 ### How the cooldown timer works
 
@@ -202,15 +220,25 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **Nano Banana 2 generation params on the NB2 Model node** — five combo widgets: Aspect Ratio (15 options including `auto`), Images (1–4), Output Format (png/jpeg/webp), Resolution (0.5K/1K/2K/4K), Safety (1–6, default 4). All pushed to `apiClient.js` via `setGenerationParams()` every tick. API Key is also a canvas widget on the node, pushed via `setApiKey()`. Changing Resolution or Images instantly updates the estimated cost.
 
-**NB2 Model canvas stats** — three values drawn directly on the canvas at the bottom of the NB2 Model node: Spent / Est. / Req. Drawn by `onDrawForeground(ctx)` using canvas 2D drawing calls. `computeSize()` is overridden to add 36px of extra height so the stats row is never hidden behind the last widget.
+**NB2 Model canvas stats** — three values drawn directly on the canvas at the bottom of the NB2 Model node: Spent / Est. / Req. Drawn by `onDrawForeground(ctx)` using canvas 2D drawing calls. `computeSize()` is overridden to add 36px of extra height so the stats row is never hidden behind the last widget. The Est. value is `calculateCost(params) × formatCount` — where `formatCount` comes from `_getFormatCount()`, a helper that reads `selectedFormats.length` from the upstream Ad Format node (or returns 1 if none is connected).
+
+**NB2ModelNode helpers** — two private methods added to `NB2ModelNode.prototype`:
+- `_isAspectRatioOverridden()` — returns true when an Ad Format node is connected to the Prompt input and has at least one format selected. Sets `this._aspectRatio.disabled` accordingly on every tick.
+- `_getFormatCount()` — returns `selectedFormats.length` from the upstream Ad Format node, or 1 if no Ad Format node is connected or no formats are selected. Used to multiply the cost estimate.
 
 **ContextControl.js** — currently disabled. The UI is not built. `getMode()` always returns `'open'`. All other functions (setAnchorImageUrl, resetContext) are preserved for re-enabling later without major changes.
 
 **assembleImages()** — a function in `promptAssembler.js` that runs on every graph tick. Iterates all nodes connected to the Prompt Assembler, collects `{ data, label }` from each node's `images` array, and returns a flat array. The Prompt Assembler passes this to `apiClient.js` via `setReferenceImages()`.
 
-**ImageModal.js** — a full-screen overlay shown after every successful generation. Shows all generated images in a flex-wrap grid, each with an "Open full size ↗" link and a ✕ close button. Created once, reused for every generation.
+**ImageModal.js** — a full-screen overlay shown after every successful generation. Accepts an array of `{url, label}` objects. In single mode `label` is `null` and nothing extra is shown. In batch mode `label` is `"Format Name · W×H"` and appears between the thumbnail and the "Open full size" link.
 
-**apiClient.js module state** — `_apiKey`, `_format`, `_currentPrompt`, `_generationParams`, and `_referenceImages` are all stored as module-level variables. The NB2 Model node pushes the key and format every tick. The Prompt Assembler node pushes the prompt and images every tick. `generate()` reads from these variables directly — no DOM reads needed.
+**apiClient.js module state** — `_apiKey`, `_format`, `_currentPrompt`, `_generationParams`, `_referenceImages`, and `_selectedFormats` are all stored as module-level variables. `generate()` branches on `_selectedFormats.length`: zero means single generation (`_generateSingle`), non-zero means batch (`_generateBatch`).
+
+**AdFormatNode.js** — optional pass-through node. Receives the prompt, passes it downstream unchanged, and pushes its `selectedFormats` array to `apiClient` via `setSelectedFormats()` on every tick. Uses `onRemoved()` to clear the format list when deleted from the canvas.
+
+**AdFormatPanel.js** — checkbox UI loaded from `Data/image_ad_formats_nb2.json`. Groups formats by platform cluster. Each row shows the format name and `formatRatio`. "Select all / Clear" toggle per group. Footer shows total selected count. Selections are stored directly on `node.selectedFormats`.
+
+**Data/image_ad_formats_nb2.json** — 33 ad formats whose `formatRatio` exactly matches one of NB2's 14 supported aspect ratios. Filtered from `image_ad_formats.json` (79 formats total). `formatRatio` was calculated algorithmically using the GCD of width and height.
 
 **LogPanel.js** — creates a fixed 80px bar at the bottom of the screen. Any module can call `log(message, type)` to add a line. Type is `'success'` (green), `'error'` (red), or `'info'` (grey). The bar shows the last 5 messages, newest at the top, each prefixed with a timestamp. The bar element is created lazily — it is built into the DOM the first time `log()` is called. `apiClient.js` calls `log()` at every meaningful event: sending a request, successful generation (including image count and cost), API errors, CORS errors, and blocked generations.
 
@@ -222,7 +250,6 @@ This document is a plain English map of the codebase. It is updated after every 
 
 - Save/load graph state
 - Flux 2 Flex model node (second model node, same pattern as NB2ModelNode)
-- GitHub publication (README, LICENSE, CONTRIBUTING.md)
 
 ---
 
@@ -242,4 +269,3 @@ The core generation chain is complete: prompt assembly → reference image colle
 Next planned steps:
 - Add a Flux 2 Flex model node (same pattern as NB2ModelNode, different API endpoint and params)
 - Save/load graph state to a JSON file
-- Publish to GitHub as open source

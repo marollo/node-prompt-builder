@@ -1,0 +1,363 @@
+{
+  "meta": {
+    "title": "Image Ad Formats — NB2 Compatible",
+    "description": "Ad formats whose exact aspect ratio is natively supported by Nano Banana 2.",
+    "source": "Filtered from image_ad_formats.json — only formatRatio values present in the NB2 aspect_ratio enum.",
+    "total_formats": 33,
+    "clusters": 11
+  },
+  "clusters": [
+    {
+      "cluster": "Display Ads – Rectangle & Square",
+      "formats": [
+        {
+          "name": "Small Square",
+          "width": 200,
+          "height": 200,
+          "ratio": "1:1",
+          "platform": "Web Display",
+          "use_case": "Compact placements",
+          "formatRatio": "1:1"
+        },
+        {
+          "name": "Square",
+          "width": 250,
+          "height": 250,
+          "ratio": "1:1",
+          "platform": "Web Display",
+          "use_case": "Flexible placements",
+          "formatRatio": "1:1"
+        }
+      ]
+    },
+    {
+      "cluster": "Display Ads – Mobile",
+      "formats": [
+        {
+          "name": "Mobile Interstitial",
+          "width": 320,
+          "height": 480,
+          "ratio": "2:3",
+          "platform": "Mobile Display",
+          "use_case": "Full-screen between content",
+          "formatRatio": "2:3"
+        },
+        {
+          "name": "Mobile Large Interstitial",
+          "width": 640,
+          "height": 480,
+          "ratio": "4:3",
+          "platform": "Mobile / Tablet",
+          "use_case": "Tablet full-screen interstitial",
+          "formatRatio": "4:3"
+        }
+      ]
+    },
+    {
+      "cluster": "Facebook & Instagram",
+      "formats": [
+        {
+          "name": "Feed Square",
+          "width": 1080,
+          "height": 1080,
+          "ratio": "1:1",
+          "platform": "Facebook / Instagram",
+          "use_case": "Feed posts and ads",
+          "formatRatio": "1:1"
+        },
+        {
+          "name": "Feed Portrait",
+          "width": 1080,
+          "height": 1350,
+          "ratio": "4:5",
+          "platform": "Facebook / Instagram",
+          "use_case": "Most screen real estate in feed",
+          "formatRatio": "4:5"
+        },
+        {
+          "name": "Story Image",
+          "width": 1080,
+          "height": 1920,
+          "ratio": "9:16",
+          "platform": "Facebook / Instagram",
+          "use_case": "Full-screen vertical story ad",
+          "formatRatio": "9:16"
+        },
+        {
+          "name": "Carousel Card",
+          "width": 1080,
+          "height": 1080,
+          "ratio": "1:1",
+          "platform": "Facebook / Instagram",
+          "use_case": "Swipeable multi-image ads",
+          "formatRatio": "1:1"
+        },
+        {
+          "name": "Right Column",
+          "width": 1200,
+          "height": 1200,
+          "ratio": "1:1",
+          "platform": "Facebook",
+          "use_case": "Desktop sidebar ad unit",
+          "formatRatio": "1:1"
+        },
+        {
+          "name": "Instagram Explore",
+          "width": 1080,
+          "height": 1080,
+          "ratio": "1:1",
+          "platform": "Instagram",
+          "use_case": "Explore tab sponsored post",
+          "formatRatio": "1:1"
+        }
+      ]
+    },
+    {
+      "cluster": "LinkedIn",
+      "formats": [
+        {
+          "name": "Sponsored Content – Square",
+          "width": 1200,
+          "height": 1200,
+          "ratio": "1:1",
+          "platform": "LinkedIn",
+          "use_case": "Feed ad, high mobile visibility",
+          "formatRatio": "1:1"
+        },
+        {
+          "name": "Carousel Card",
+          "width": 1080,
+          "height": 1080,
+          "ratio": "1:1",
+          "platform": "LinkedIn",
+          "use_case": "Multi-card swipe ads",
+          "formatRatio": "1:1"
+        },
+        {
+          "name": "Dynamic Ad / Text Ad Image",
+          "width": 100,
+          "height": 100,
+          "ratio": "1:1",
+          "platform": "LinkedIn",
+          "use_case": "Right-rail small ad unit",
+          "formatRatio": "1:1"
+        },
+        {
+          "name": "Spotlight Ad Logo",
+          "width": 100,
+          "height": 100,
+          "ratio": "1:1",
+          "platform": "LinkedIn",
+          "use_case": "Right-rail spotlight unit",
+          "formatRatio": "1:1"
+        }
+      ]
+    },
+    {
+      "cluster": "X / Twitter",
+      "formats": [
+        {
+          "name": "Promoted Tweet – Landscape",
+          "width": 1200,
+          "height": 675,
+          "ratio": "16:9",
+          "platform": "X / Twitter",
+          "use_case": "In-feed promoted tweet",
+          "formatRatio": "16:9"
+        },
+        {
+          "name": "Promoted Tweet – Square",
+          "width": 1200,
+          "height": 1200,
+          "ratio": "1:1",
+          "platform": "X / Twitter",
+          "use_case": "In-feed square promoted",
+          "formatRatio": "1:1"
+        }
+      ]
+    },
+    {
+      "cluster": "TikTok",
+      "formats": [
+        {
+          "name": "In-Feed Image Ad",
+          "width": 1080,
+          "height": 1920,
+          "ratio": "9:16",
+          "platform": "TikTok",
+          "use_case": "Full-screen vertical in feed",
+          "formatRatio": "9:16"
+        },
+        {
+          "name": "TopView Static",
+          "width": 1080,
+          "height": 1920,
+          "ratio": "9:16",
+          "platform": "TikTok",
+          "use_case": "First ad shown on app open",
+          "formatRatio": "9:16"
+        },
+        {
+          "name": "Brand Takeover Image",
+          "width": 1080,
+          "height": 1920,
+          "ratio": "9:16",
+          "platform": "TikTok",
+          "use_case": "Full-screen immediate impact",
+          "formatRatio": "9:16"
+        }
+      ]
+    },
+    {
+      "cluster": "Pinterest",
+      "formats": [
+        {
+          "name": "Standard Pin",
+          "width": 1000,
+          "height": 1500,
+          "ratio": "2:3",
+          "platform": "Pinterest",
+          "use_case": "Feed pin, recommended ratio",
+          "formatRatio": "2:3"
+        },
+        {
+          "name": "Square Pin",
+          "width": 1000,
+          "height": 1000,
+          "ratio": "1:1",
+          "platform": "Pinterest",
+          "use_case": "Grid-friendly format",
+          "formatRatio": "1:1"
+        },
+        {
+          "name": "Story / Idea Pin",
+          "width": 1080,
+          "height": 1920,
+          "ratio": "9:16",
+          "platform": "Pinterest",
+          "use_case": "Full vertical idea pins",
+          "formatRatio": "9:16"
+        },
+        {
+          "name": "Shopping Ad",
+          "width": 1000,
+          "height": 1500,
+          "ratio": "2:3",
+          "platform": "Pinterest",
+          "use_case": "Product catalog pins",
+          "formatRatio": "2:3"
+        }
+      ]
+    },
+    {
+      "cluster": "Snapchat",
+      "formats": [
+        {
+          "name": "Snap Ad – Image",
+          "width": 1080,
+          "height": 1920,
+          "ratio": "9:16",
+          "platform": "Snapchat",
+          "use_case": "Full-screen vertical story ad",
+          "formatRatio": "9:16"
+        },
+        {
+          "name": "Collection Ad",
+          "width": 1080,
+          "height": 1920,
+          "ratio": "9:16",
+          "platform": "Snapchat",
+          "use_case": "Shoppable story format",
+          "formatRatio": "9:16"
+        },
+        {
+          "name": "Dynamic Ad",
+          "width": 1080,
+          "height": 1920,
+          "ratio": "9:16",
+          "platform": "Snapchat",
+          "use_case": "Catalog-driven auto-generated",
+          "formatRatio": "9:16"
+        }
+      ]
+    },
+    {
+      "cluster": "Email & Newsletter Banners",
+      "formats": [
+        {
+          "name": "Email Square Image",
+          "width": 600,
+          "height": 600,
+          "ratio": "1:1",
+          "platform": "Email",
+          "use_case": "Product feature block in email",
+          "formatRatio": "1:1"
+        },
+        {
+          "name": "Email Thumbnail",
+          "width": 165,
+          "height": 165,
+          "ratio": "1:1",
+          "platform": "Email",
+          "use_case": "Small product image in email",
+          "formatRatio": "1:1"
+        }
+      ]
+    },
+    {
+      "cluster": "Website Banners",
+      "formats": [
+        {
+          "name": "Homepage Hero – Full Width",
+          "width": 1920,
+          "height": 1080,
+          "ratio": "16:9",
+          "platform": "Website",
+          "use_case": "Full-width website header",
+          "formatRatio": "16:9"
+        },
+        {
+          "name": "Pop-up / Modal Banner",
+          "width": 600,
+          "height": 400,
+          "ratio": "3:2",
+          "platform": "Website",
+          "use_case": "On-site modal overlay",
+          "formatRatio": "3:2"
+        }
+      ]
+    },
+    {
+      "cluster": "Google Display Network (GDN) Image Ads",
+      "formats": [
+        {
+          "name": "Small Square",
+          "width": 200,
+          "height": 200,
+          "ratio": "1:1",
+          "platform": "GDN",
+          "use_case": "Compact GDN placement",
+          "formatRatio": "1:1"
+        },
+        {
+          "name": "Square",
+          "width": 250,
+          "height": 250,
+          "ratio": "1:1",
+          "platform": "GDN",
+          "use_case": "Flexible GDN placement",
+          "formatRatio": "1:1"
+        },
+        {
+          "name": "Shopping / Product Image",
+          "width": 800,
+          "height": 800,
+          "ratio": "1:1",
+          "platform": "Google Shopping",
+          "use_case": "Product listing image",
+          "formatRatio": "1:1"
+        }
+      ]
+    }
+  ]
+}

@@ -91,11 +91,55 @@ NB2ModelNode.prototype.onExecute = function () {
   }
   setGenerationParams(params)
 
-  // Keep the estimated cost display in sync with current params
-  updateEstimate(calculateCost(params))
+  // Keep the estimated cost display in sync with current params.
+  // Multiply by format count so batch mode shows the total estimated spend.
+  updateEstimate(calculateCost(params) * this._getFormatCount())
+
+  // Grey out Aspect Ratio when an Ad Format node upstream is controlling it
+  this._aspectRatio.disabled = this._isAspectRatioOverridden()
 
   // Mark node as needing a canvas redraw so the stats stay current
   this.setDirtyCanvas(true)
+}
+
+// ─── _isAspectRatioOverridden ──────────────────────────────────────────────────
+
+/**
+ * Returns true when an Ad Format node is connected to the Prompt input
+ * AND has at least one format selected.
+ * In that case the aspect ratio is set per-format during batch generation,
+ * so the Aspect Ratio widget on this node has no effect and should be disabled.
+ */
+NB2ModelNode.prototype._isAspectRatioOverridden = function () {
+  // No connection on the Prompt input — nothing to check
+  if (!this.inputs[0] || this.inputs[0].link == null) return false
+
+  // Look up the actual link object to find which node is upstream
+  const link = this.graph.links[this.inputs[0].link]
+  if (!link) return false
+
+  const sourceNode = this.graph.getNodeById(link.origin_id)
+
+  // Only override when the upstream node is an Ad Format node with formats chosen
+  return sourceNode &&
+    sourceNode.type === 'prompt/AdFormat' &&
+    sourceNode.selectedFormats.length > 0
+}
+
+// ─── _getFormatCount ───────────────────────────────────────────────────────────
+
+/**
+ * Returns how many ad formats are currently selected on the upstream Ad Format node.
+ * Returns 1 when no Ad Format node is connected, so single-generation cost is unchanged.
+ * Used to multiply the base cost estimate by the number of batch generations.
+ */
+NB2ModelNode.prototype._getFormatCount = function () {
+  if (!this.inputs[0] || this.inputs[0].link == null) return 1
+  const link = this.graph.links[this.inputs[0].link]
+  if (!link) return 1
+  const sourceNode = this.graph.getNodeById(link.origin_id)
+  if (!sourceNode || sourceNode.type !== 'prompt/AdFormat') return 1
+  return sourceNode.selectedFormats.length || 1
 }
 
 // ─── onDrawForeground ─────────────────────────────────────────────────────────

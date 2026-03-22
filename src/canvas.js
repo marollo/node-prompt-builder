@@ -8,6 +8,7 @@ import { LGraph, LGraphCanvas, LiteGraph } from 'litegraph.js'
 // Import node types — each import registers them with LiteGraph automatically
 import './nodes/PromptAssemblerNode.js'
 import './nodes/NB2ModelNode.js'
+import './nodes/AdFormatNode.js'
 import './nodes/SubjectNode.js'
 import './nodes/LocationNode.js'
 import './nodes/CameraNode.js'

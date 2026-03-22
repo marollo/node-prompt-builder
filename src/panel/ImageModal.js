@@ -38,35 +38,43 @@ function buildModal() {
 
 /**
  * Shows the modal with all generated images in a grid.
- * Accepts an array of image URL strings.
+ * Accepts an array of { url, label } objects.
+ * label is shown under the image — used for batch mode to identify the format.
+ * label can be null for single generations.
  * Called by apiClient.js after a successful generation.
  */
-function showImage(urls) {
+function showImage(items) {
   if (!_modalEl) _modalEl = buildModal()
 
   const grid = _modalEl.querySelector('#image-modal-grid')
-
-  // Clear any images from a previous generation
   grid.innerHTML = ''
 
-  // Build one block per image — thumbnail + "Open full size" link below it
-  for (const url of urls) {
+  for (const item of items) {
     const block = document.createElement('div')
     block.className = 'image-modal-item'
 
     const img = document.createElement('img')
-    img.src = url
-    img.alt = 'Generated image'
+    img.src = item.url
+    img.alt = item.label || 'Generated image'
     img.className = 'image-modal-thumb'
 
     const link = document.createElement('a')
-    link.href = url
+    link.href = item.url
     link.target = '_blank'
     link.rel = 'noopener'
     link.textContent = 'Open full size ↗'
     link.className = 'image-modal-link'
 
     block.appendChild(img)
+
+    // Show the format label (e.g. "Story Image · 1080×1920") when present
+    if (item.label) {
+      const labelEl = document.createElement('div')
+      labelEl.className = 'image-modal-label'
+      labelEl.textContent = item.label
+      block.appendChild(labelEl)
+    }
+
     block.appendChild(link)
     grid.appendChild(block)
   }

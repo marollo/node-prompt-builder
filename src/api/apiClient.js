@@ -29,6 +29,9 @@ let _apiKey = ''
 // Which model/format is active — set by the model node on every tick
 let _format = 'Nano Banana 2'
 
+// Ad formats selected in the AdFormatNode panel — empty means single generation
+let _selectedFormats = []
+
 /**
  * Stores the latest assembled prompt.
  * Called by the Output node on every graph tick.
@@ -64,6 +67,15 @@ function setReferenceImages(images) {
  */
 function setApiKey(key) {
   _apiKey = key || ''
+}
+
+/**
+ * Stores the list of ad formats selected in the AdFormatNode panel.
+ * Empty array means no Ad Format node is active — single generation mode.
+ * Called by AdFormatNode on every tick, and cleared when the node is removed.
+ */
+function setSelectedFormats(formats) {
+  _selectedFormats = formats || []
 }
 
 /**
@@ -104,79 +116,123 @@ function _showButtonError(message) {
 // ─── Generate ─────────────────────────────────────────────────────────────────
 
 /**
- * Reads panel settings, validates them, then sends the prompt to the API.
- * Called by the Generate button in the Output node side panel.
+ * Entry point called by the Generate button on the NB2 Model node.
+ * Branches into single generation or batch depending on whether ad formats
+ * are selected in a connected AdFormatNode.
  */
 async function generate() {
-  // Stop early if budget is reached or cooldown is active
   if (!canGenerate()) {
     log('Generate blocked — budget reached or cooldown active', 'info')
-    console.warn('Generate: blocked by cost control (budget or cooldown).')
     return
   }
-
-  // Stop early if the prompt is empty or still the placeholder
   if (!_currentPrompt || _currentPrompt.startsWith('Connect nodes')) {
     _showButtonError('No prompt yet')
     log('No prompt yet — connect nodes to the Prompt Assembler', 'info')
     return
   }
 
-  // Show "Generating…" on the button while the request is in flight
+  if (_selectedFormats.length > 0) {
+    await _generateBatch()
+  } else {
+    await _generateSingle()
+  }
+}
+
+/**
+ * Sends a single request using the current params — the original behaviour.
+ * Used when no Ad Format node is connected.
+ */
+async function _generateSingle() {
   _setGenerating()
   log('Sending request…', 'info')
 
-  // Build the request using the stored API key and format
   const settings = { url: '', apiKey: _apiKey }
   const { url, options } = _format === 'Nano Banana 2'
     ? buildFalaiRequest(_currentPrompt, settings, _generationParams, getMode(), getAnchorImageUrl(), _referenceImages)
     : buildGenericRequest(_currentPrompt, settings)
 
   try {
-    console.log('Sending request to', url)
     const response = await fetch(url, options)
-
     if (!response.ok) {
       _showButtonError(`Error ${response.status}`)
       log(`API error ${response.status}: ${response.statusText}`, 'error')
-      console.error('API error:', response.status, response.statusText)
       return
     }
-
     const data = await response.json()
-    console.log('API response:', data)
-
-    // For Nano Banana 2: show all generated images, store first as anchor, record cost
     if (_format === 'Nano Banana 2') {
       const imageUrls = parseFalaiResponse(data)
       if (imageUrls.length > 0) {
-        showImage(imageUrls)
-        // Store the first image as the anchor for context control
+        showImage(imageUrls.map(url => ({ url, label: null })))
         setAnchorImageUrl(imageUrls[0])
       }
       const cost = calculateCost(_generationParams)
       addSpent(cost)
       log(`Generated ${imageUrls.length} image(s) — ~$${cost.toFixed(3)} this request`, 'success')
     }
-
-    // Count this as a successful generation and start the cooldown
     recordGeneration()
-
   } catch (err) {
-    // TypeError means the browser blocked the request — usually a CORS issue
     if (err instanceof TypeError) {
       _showButtonError('CORS error — see console')
       log('Request blocked — CORS error (the API server must allow this origin)', 'error')
-      console.error(
-        'Request blocked — likely a CORS issue.\n' +
-        'The API server at', url, 'must allow requests from this origin.'
-      )
     } else {
       _showButtonError('Request failed')
       log(`Request failed: ${err.message}`, 'error')
-      console.error('Request failed:', err.message)
     }
   }
 }
 
-export { setPrompt, setGenerationParams, setReferenceImages, setApiKey, setFormat, generate }
+/**
+ * Loops through the selected ad formats and sends one request per format.
+ * Each request uses the format's exact aspect ratio, overriding the NB2 widget.
+ * Results are collected and shown together in the modal with format labels.
+ */
+async function _generateBatch() {
+  const total = _selectedFormats.length
+  const results = []
+  const btn = document.getElementById('api-generate-btn')
+
+  for (let i = 0; i < _selectedFormats.length; i++) {
+    const format = _selectedFormats[i]
+
+    // Update button to show progress
+    if (btn) { btn.disabled = true; btn.textContent = `${i + 1} / ${total}…` }
+    log(`Generating ${i + 1}/${total} — ${format.name} (${format.formatRatio})`, 'info')
+
+    // Override aspect ratio with this format's exact ratio
+    const params = { ..._generationParams, aspectRatio: format.formatRatio }
+    const settings = { url: '', apiKey: _apiKey }
+    const { url, options } = buildFalaiRequest(
+      _currentPrompt, settings, params, getMode(), getAnchorImageUrl(), _referenceImages
+    )
+
+    try {
+      const response = await fetch(url, options)
+      if (!response.ok) {
+        log(`Error on ${format.name}: ${response.status} ${response.statusText}`, 'error')
+        continue
+      }
+      const data = await response.json()
+      const imageUrls = parseFalaiResponse(data)
+      if (imageUrls.length > 0) {
+        // Label shows format name and pixel dimensions for easy identification
+        results.push({ url: imageUrls[0], label: `${format.name} · ${format.width}×${format.height}` })
+        setAnchorImageUrl(imageUrls[0])
+      }
+      const cost = calculateCost(params)
+      addSpent(cost)
+      recordGeneration()
+      log(`✓ ${format.name} — ~$${cost.toFixed(3)}`, 'success')
+    } catch (err) {
+      log(`Failed: ${format.name} — ${err.message}`, 'error')
+    }
+  }
+
+  // Show all collected results in the modal
+  if (results.length > 0) showImage(results)
+
+  // Restore the button
+  if (btn) { btn.disabled = false; btn.textContent = 'Generate' }
+  log(`Batch complete — ${results.length} of ${total} succeeded`, results.length === total ? 'success' : 'info')
+}
+
+export { setPrompt, setGenerationParams, setReferenceImages, setApiKey, setFormat, setSelectedFormats, generate }

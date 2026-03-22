@@ -249,6 +249,12 @@ Build and verify each step in the browser before moving to the next:
 18. ✅ Named input slots — Output node has five fixed slots (Subject, Location, Camera, Lighting, Style) in Google framework order, replacing generic dynamic "fragment" slots
 19. ✅ Node architecture split — Output node replaced by two separate nodes: PromptAssemblerNode (prompt assembly, View/Copy, output slot) and NB2ModelNode (generation params, API key, Generate, Cost Settings, live stats on canvas)
 20. ✅ Log bar — fixed 80px strip at the bottom of the window showing timestamped API responses and errors; canvas height reduced by 80px so the bar never covers the graph
+21. ✅ Ad format data — `formatRatio` added to all 79 formats in `image_ad_formats.json` using GCD algorithm; `image_ad_formats_nb2.json` created with 33 formats whose ratio exactly matches a NB2-supported aspect ratio
+22. ✅ Ad Format node — optional pass-through node between Prompt Assembler and NB2 Model; "Select Formats" button opens checkbox panel grouped by platform; selected count drawn on canvas
+23. ✅ Ad Format panel — checkbox UI loaded from `image_ad_formats_nb2.json`; formats grouped by platform cluster; each row shows name and ratio; select all / clear toggle per group
+24. ✅ Batch generation — `generate()` in `apiClient.js` branches on `_selectedFormats`; `_generateBatch()` loops sequentially through selected formats, overrides aspect ratio per request, collects `{url, label}` results; ImageModal updated to show format name and dimensions under each image
+25. ✅ Aspect Ratio widget lock — Aspect Ratio widget on NB2 Model node is automatically disabled when an Ad Format node is connected upstream with formats selected; re-enables when disconnected or formats cleared; implemented via `_isAspectRatioOverridden()` helper called on every tick
+26. ✅ Batch cost estimate — Est. figure on NB2 Model node now shows total batch cost (base cost × format count); implemented via `_getFormatCount()` helper reading `selectedFormats.length` from the upstream Ad Format node
 
 ---
 

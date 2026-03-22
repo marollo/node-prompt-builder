@@ -409,6 +409,15 @@ html, body {
   border-radius: 4px;
 }
 
+/* Format label shown between thumbnail and open link — only in batch mode */
+.image-modal-label {
+  color: #aaa;
+  font-size: 11px;
+  font-family: monospace;
+  text-align: center;
+  margin-top: 4px;
+}
+
 /* "Open full size" link below each thumbnail */
 .image-modal-link {
   color: #2dd4bf;
@@ -456,3 +465,88 @@ html, body {
 .log-entry--success { color: #22c55e; }
 .log-entry--error   { color: #f43f5e; }
 .log-entry--info    { color: #666;    }
+
+/* ─── Ad Format panel ────────────────────────────────────────────────────────
+   Checkbox list inside the properties panel for selecting ad formats.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* One platform cluster — e.g. "Facebook & Instagram" */
+.adformat-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 14px;
+}
+
+/* Cluster header row — name on left, select all toggle on right */
+.adformat-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.adformat-group-name {
+  color: #888;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: sans-serif;
+}
+
+/* "Select all / Clear" button */
+.adformat-toggle {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 11px;
+  font-family: sans-serif;
+  cursor: pointer;
+  padding: 0;
+}
+
+.adformat-toggle:hover { color: #aaa; }
+
+/* One row per format — checkbox + name + ratio */
+.adformat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: sans-serif;
+}
+
+.adformat-row:hover { background: #2a2a2a; }
+
+.adformat-row input[type=checkbox] { flex-shrink: 0; cursor: pointer; }
+
+/* Format name — takes all available space */
+.adformat-row-name {
+  flex: 1;
+  color: #ccc;
+  font-size: 12px;
+}
+
+/* Ratio badge on the right — e.g. "9:16" */
+.adformat-row-ratio {
+  color: #555;
+  font-size: 11px;
+  font-family: monospace;
+  white-space: nowrap;
+  padding-left: 16px;
+  margin-left: auto;
+}
+
+/* Footer showing total selected count */
+.adformat-footer {
+  padding: 10px 0 4px;
+  border-top: 1px solid #333;
+  color: #666;
+  font-size: 12px;
+  font-family: sans-serif;
+  text-align: center;
+  flex-shrink: 0;
+}
