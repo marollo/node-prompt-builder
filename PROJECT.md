@@ -255,6 +255,7 @@ Build and verify each step in the browser before moving to the next:
 24. ✅ Batch generation — `generate()` in `apiClient.js` branches on `_selectedFormats`; `_generateBatch()` loops sequentially through selected formats, overrides aspect ratio per request, collects `{url, label}` results; ImageModal updated to show format name and dimensions under each image
 25. ✅ Aspect Ratio widget lock — Aspect Ratio widget on NB2 Model node is automatically disabled when an Ad Format node is connected upstream with formats selected; re-enables when disconnected or formats cleared; implemented via `_isAspectRatioOverridden()` helper called on every tick
 26. ✅ Batch cost estimate — Est. figure on NB2 Model node now shows total batch cost (base cost × format count); implemented via `_getFormatCount()` helper reading `selectedFormats.length` from the upstream Ad Format node
+27. ✅ IndexedDB persistence — canvas state (nodes, connections, text, widget values, reference images, ad format selections) saved to IndexedDB every 2 seconds and restored on page reload; `storageUtils.js` wraps the IndexedDB API; `onSerialize`/`onConfigure` added to all content nodes and AdFormatNode
 
 ---
 

@@ -36,6 +36,11 @@ This document is a plain English map of the codebase. It is updated after every 
 - Selected count is drawn at the bottom of the node (green when formats are active)
 - Clears its format list from `apiClient.js` when removed from the canvas
 
+**Canvas persistence**
+- The entire canvas state is saved to IndexedDB automatically every 2 seconds
+- On page reload, the saved state is restored — all nodes, positions, connections, text, widget values, reference images, and selected ad formats come back exactly as they were
+- First run (nothing saved yet) shows the default empty canvas with one Prompt Assembler and one NB2 Model node
+
 **Shared behaviour**
 - The assembled prompt uses sentence structure: each node's contribution is a separate clause capitalised at the start, joined with `". "`
 - When a node has reference images uploaded, its section opens with `"Using the provided [label], "` — following the multimodal prompting formula
@@ -90,7 +95,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   └── utils/
 │       ├── nodeOptions.js            ← All dropdown data for all nodes — BUILT
 │       ├── imageUtils.js             ← Image helpers — placeholder
-│       └── storageUtils.js           ← Save/load helpers — placeholder
+│       └── storageUtils.js           ← IndexedDB save/load wrapper — BUILT
 ├── public/                           ← Static assets (empty for now)
 └── docs/                             ← Plain English documentation per subsystem
 ```
@@ -102,12 +107,15 @@ This document is a plain English map of the codebase. It is updated after every 
 ### Boot sequence
 1. Browser loads `index.html`
 2. `index.html` loads `styles.css` and `main.js`
-3. `main.js` calls `initCanvas()` from `canvas.js`
+3. `main.js` awaits `initCanvas()` from `canvas.js` (async because it reads IndexedDB)
 4. `canvas.js` imports all node files — each import registers the node type with LiteGraph
 5. `canvas.js` deletes all LiteGraph built-in node types, leaving only our `prompt/` nodes
 6. `canvas.js` creates the `LGraph` (data) and `LGraphCanvas` (renderer)
-7. One Prompt Assembler node and one NB2 Model node are added to the canvas automatically
-8. The graph starts its render and execution loop
+7. `loadGraph()` from `storageUtils.js` checks IndexedDB for a saved state
+8. If saved data exists: `graph.configure(saved)` restores all nodes, connections, and custom data
+9. If no saved data: one Prompt Assembler node and one NB2 Model node are created as defaults
+10. A `setInterval` starts auto-saving `graph.serialize()` to IndexedDB every 2 seconds
+11. The graph starts its render and execution loop
 
 ### When the user connects a content node to the Prompt Assembler
 1. On the next graph tick, `onExecute` fires on the Prompt Assembler node
@@ -225,6 +233,12 @@ This document is a plain English map of the codebase. It is updated after every 
 **NB2ModelNode helpers** — two private methods added to `NB2ModelNode.prototype`:
 - `_isAspectRatioOverridden()` — returns true when an Ad Format node is connected to the Prompt input and has at least one format selected. Sets `this._aspectRatio.disabled` accordingly on every tick.
 - `_getFormatCount()` — returns `selectedFormats.length` from the upstream Ad Format node, or 1 if no Ad Format node is connected or no formats are selected. Used to multiply the cost estimate.
+
+**storageUtils.js** — a Promise-based wrapper around the browser's IndexedDB API. Exports `saveGraph(data)` and `loadGraph()`. Internally opens (or creates) a database called `node-prompt-builder` with a single object store called `graph`. The entire serialized graph is stored under the key `canvas`. Every call to `openDB()` returns a fresh connection — no persistent connection is kept.
+
+**IndexedDB persistence** — unlike `localStorage`, IndexedDB has no practical size limit and handles large JSON objects (including base64 reference images) without issues. The graph is saved as the plain object returned by `graph.serialize()`, which LiteGraph can restore in full with `graph.configure()`.
+
+**`onSerialize` / `onConfigure`** — two LiteGraph hooks that every content node implements. `onSerialize(info)` adds our custom data (`this.values`, `this.images`, `this.selectedFormats`) to the object LiteGraph is about to save. `onConfigure(info)` reads it back when restoring. Without these hooks, custom data would be lost on reload because LiteGraph only saves widget values and positions by default.
 
 **ContextControl.js** — currently disabled. The UI is not built. `getMode()` always returns `'open'`. All other functions (setAnchorImageUrl, resetContext) are preserved for re-enabling later without major changes.
 
