@@ -87,6 +87,26 @@ SubjectNode.prototype.onExecute = function () {
   this.setOutputData(0, this.getPromptFragment())
 }
 
+// ─── Serialization ────────────────────────────────────────────────────────────
+
+/**
+ * Called by LiteGraph when saving the graph.
+ * Adds our custom text values and uploaded images to the save data.
+ */
+SubjectNode.prototype.onSerialize = function (info) {
+  info.extra = { values: this.values, images: this.images }
+}
+
+/**
+ * Called by LiteGraph when loading a saved graph.
+ * Restores text values and uploaded images from the save data.
+ */
+SubjectNode.prototype.onConfigure = function (info) {
+  if (!info.extra) return
+  if (info.extra.values) this.values = info.extra.values
+  if (info.extra.images) this.images = info.extra.images
+}
+
 // ─── Register ─────────────────────────────────────────────────────────────────
 
 LiteGraph.registerNodeType('prompt/Subject', SubjectNode)

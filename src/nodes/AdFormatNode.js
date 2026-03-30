@@ -48,6 +48,26 @@ AdFormatNode.prototype.onExecute = function () {
   this.setDirtyCanvas(true)
 }
 
+// ─── Serialization ────────────────────────────────────────────────────────────
+
+/**
+ * Called by LiteGraph when saving the graph.
+ * Adds the list of selected ad formats to the save data.
+ */
+AdFormatNode.prototype.onSerialize = function (info) {
+  info.extra = { selectedFormats: this.selectedFormats }
+}
+
+/**
+ * Called by LiteGraph when loading a saved graph.
+ * Restores the previously selected ad formats.
+ */
+AdFormatNode.prototype.onConfigure = function (info) {
+  if (info.extra && info.extra.selectedFormats) {
+    this.selectedFormats = info.extra.selectedFormats
+  }
+}
+
 /**
  * Clears the format list in apiClient when this node is removed from the canvas.
  * Prevents the NB2 node from running a stale batch after the node is gone.

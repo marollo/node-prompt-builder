@@ -4,6 +4,7 @@
  */
 
 import { LGraph, LGraphCanvas, LiteGraph } from 'litegraph.js'
+import { saveGraph, loadGraph } from './utils/storageUtils.js'
 
 // Import node types — each import registers them with LiteGraph automatically
 import './nodes/PromptAssemblerNode.js'
@@ -27,9 +28,11 @@ for (const type in LiteGraph.registered_node_types) {
 /**
  * Creates the graph, attaches it to the canvas element, and adds a default
  * Output node to the centre of the canvas so the user has somewhere to start.
+ * On reload, restores the previously saved graph from IndexedDB instead of
+ * creating empty defaults — so the user never loses their work.
  * Returns the graph instance so other modules can read from it later.
  */
-export function initCanvas() {
+export async function initCanvas() {
 
   // Create the graph — the data model that holds all nodes and links
   const graph = new LGraph()
@@ -59,15 +62,27 @@ export function initCanvas() {
     graphCanvas.setDirty(true, true)
   })
 
-  // Add the Prompt Assembler node — collects content nodes and builds the prompt
-  const assemblerNode = LiteGraph.createNode('prompt/PromptAssembler')
-  graph.add(assemblerNode)
-  assemblerNode.pos = [300, 200]
+  // Try to restore a previously saved graph from IndexedDB
+  const saved = await loadGraph()
 
-  // Add the NB2 Model node — receives the prompt and sends it to the API
-  const modelNode = LiteGraph.createNode('prompt/NB2Model')
-  graph.add(modelNode)
-  modelNode.pos = [650, 200]
+  if (saved) {
+    // Saved state found — restore all nodes, connections, and custom data
+    graph.configure(saved)
+  } else {
+    // First run — create the two default starter nodes
+    const assemblerNode = LiteGraph.createNode('prompt/PromptAssembler')
+    graph.add(assemblerNode)
+    assemblerNode.pos = [300, 200]
+
+    const modelNode = LiteGraph.createNode('prompt/NB2Model')
+    graph.add(modelNode)
+    modelNode.pos = [650, 200]
+  }
+
+  // Auto-save the graph to IndexedDB every 2 seconds.
+  // This covers all types of changes: adding nodes, drawing wires,
+  // editing text, changing dropdowns, uploading images.
+  setInterval(() => saveGraph(graph.serialize()), 2000)
 
   // Start the graph — begins the render loop
   graph.start()
