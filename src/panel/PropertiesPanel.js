@@ -94,6 +94,10 @@ export function open(node) {
   }
 
   panelEl.style.display = 'flex'
+
+  // Shift the New Project button left so the panel does not cover it
+  const newProjectBtn = document.getElementById('new-project-btn')
+  if (newProjectBtn) newProjectBtn.classList.add('panel-open')
 }
 
 /**
@@ -101,6 +105,10 @@ export function open(node) {
  */
 export function close() {
   if (panelEl) panelEl.style.display = 'none'
+
+  // Return the New Project button to its default position
+  const newProjectBtn = document.getElementById('new-project-btn')
+  if (newProjectBtn) newProjectBtn.classList.remove('panel-open')
 }
 
 /**

@@ -85,8 +85,44 @@ export async function initCanvas() {
   // editing text, changing dropdowns, uploading images.
   setInterval(() => saveGraph(graph.serialize()), 2000)
 
+  // Add the "New Project" button to the top-right corner of the screen
+  _addNewProjectButton(graph)
+
   // Start the graph — begins the render loop
   graph.start()
 
   return graph
+}
+
+/**
+ * Creates and injects the "New Project" button into the page.
+ * When clicked, asks for confirmation then wipes all nodes and IndexedDB,
+ * and restores the two default starter nodes so the user has a clean slate.
+ */
+function _addNewProjectButton(graph) {
+  const btn = document.createElement('button')
+  btn.id = 'new-project-btn'
+  btn.textContent = 'New Project'
+  document.body.appendChild(btn)
+
+  btn.addEventListener('click', () => {
+    // Ask before destroying anything — this cannot be undone
+    const confirmed = window.confirm('Clear the canvas and start a new project?\nThis cannot be undone.')
+    if (!confirmed) return
+
+    // Remove all nodes and connections from the graph
+    graph.clear()
+
+    // Wipe the IndexedDB save so the next page reload also starts fresh
+    saveGraph(null)
+
+    // Recreate the two default starter nodes
+    const assemblerNode = LiteGraph.createNode('prompt/PromptAssembler')
+    graph.add(assemblerNode)
+    assemblerNode.pos = [300, 200]
+
+    const modelNode = LiteGraph.createNode('prompt/NB2Model')
+    graph.add(modelNode)
+    modelNode.pos = [650, 200]
+  })
 }

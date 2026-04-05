@@ -51,6 +51,12 @@ This document is a plain English map of the codebase. It is updated after every 
 - On page reload, the saved state is restored — all nodes, positions, connections, text, widget values, reference images, and selected ad formats come back exactly as they were
 - First run (nothing saved yet) shows the default empty canvas with one Prompt Assembler and one NB2 Model node
 
+**New Project button**
+- A small "New Project" button sits fixed in the top-right corner of the canvas
+- Clicking it shows a confirmation dialog — if confirmed, all nodes are cleared from the canvas and IndexedDB is wiped (`saveGraph(null)`)
+- The two default starter nodes (Prompt Assembler + NB2 Model) are immediately recreated so the canvas is never left empty
+- When the side panel is open, the button shifts left automatically so it is never hidden behind the panel
+
 **Shared behaviour**
 - The assembled prompt uses sentence structure: each node's contribution is a separate clause capitalised at the start, joined with `". "`
 - When a node has reference images uploaded, its section opens with `"Using the provided [label], "` — following the multimodal prompting formula

@@ -194,6 +194,35 @@ html, body {
 
 .add-image-btn:hover { border-color: #888; color: #e0e0e0; }
 
+/* ─── New Project button ─────────────────────────────────────────────────────
+   Fixed in the top-right corner of the canvas.
+   Always visible — clicking it clears all nodes and resets the project.
+   ─────────────────────────────────────────────────────────────────────────── */
+#new-project-btn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 150;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #888;
+  font-size: 12px;
+  font-family: sans-serif;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+#new-project-btn:hover {
+  border-color: #f43f5e;
+  color: #f43f5e;
+}
+
+/* Slides the button left by the panel width (320px) when the side panel is open */
+#new-project-btn.panel-open {
+  right: 370px;
+}
+
 /* ─── Dialog label fix ────────────────────────────────────────────────────────
    LiteGraph sets a dark background on the edit dialog but never sets a text
    color on the label — the browser defaults it to black, making it invisible.
