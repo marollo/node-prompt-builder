@@ -177,6 +177,6 @@ RecraftV4ModelNode.prototype.onDrawForeground = function (ctx) {
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
-LiteGraph.registerNodeType('prompt/RecraftV4Model', RecraftV4ModelNode)
+LiteGraph.registerNodeType('model/RecraftV4Model', RecraftV4ModelNode)
 
 export { RecraftV4ModelNode }

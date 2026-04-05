@@ -182,6 +182,6 @@ NB2ModelNode.prototype.onDrawForeground = function (ctx) {
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
-LiteGraph.registerNodeType('prompt/NB2Model', NB2ModelNode)
+LiteGraph.registerNodeType('model/NB2Model', NB2ModelNode)
 
 export { NB2ModelNode }

@@ -222,7 +222,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **LGraphCanvas** — the renderer. Reads from LGraph and draws it on the HTML canvas. Handles mouse interaction.
 
-**Node registration** — every node file calls `LiteGraph.registerNodeType('category/Name', NodeClass)` at the end. Importing the file in `canvas.js` is enough to register it.
+**Node registration** — every node file calls `LiteGraph.registerNodeType('category/Name', NodeClass)` at the end. Importing the file in `canvas.js` is enough to register it. The category prefix determines which section the node appears in when the user double-clicks the canvas: `prompt/` nodes (Prompt Assembler, Ad Format, and all content nodes) appear under **prompt**, and `model/` nodes (NB2 Model, Recraft V4 Pro) appear under **model**. All other LiteGraph built-in types are removed from the registry at startup so only these two sections are visible.
 
 **getPromptFragment()** — a method every content node defines. Returns a lowercase string representing that node's contribution to the final prompt. If the node has reference images, the string opens with `"Using the provided [label], "`. The assembler capitalises the first letter and joins sections with `". "`. The assembler calls this without needing to know what type of node it's dealing with.
 

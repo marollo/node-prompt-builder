@@ -19,9 +19,9 @@ import './nodes/StyleMoodNode.js'
 
 // Remove all built-in LiteGraph node types so only our custom nodes appear
 // in the search list when the user double-clicks the canvas.
-// Our nodes are all registered under the 'prompt/' category.
+// Our nodes are registered under 'prompt/' (content nodes) and 'model/' (model nodes).
 for (const type in LiteGraph.registered_node_types) {
-  if (!type.startsWith('prompt/')) {
+  if (!type.startsWith('prompt/') && !type.startsWith('model/')) {
     delete LiteGraph.registered_node_types[type]
   }
 }
