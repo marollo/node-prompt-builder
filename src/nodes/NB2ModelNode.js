@@ -149,6 +149,9 @@ NB2ModelNode.prototype._getFormatCount = function () {
  * Called by LiteGraph on every render frame.
  */
 NB2ModelNode.prototype.onDrawForeground = function (ctx) {
+  // When the node is collapsed only the title bar is visible — draw nothing extra
+  if (this.flags.collapsed) return
+
   const stats  = getStats()
   const w      = this.size[0]
   const lineY  = this.size[1] - 30  // separator line position

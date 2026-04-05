@@ -8,8 +8,8 @@ This document is a plain English map of the codebase. It is updated after every 
 
 - A dark LiteGraph canvas fills the full browser window
 - Two nodes appear on the canvas at startup: **Prompt Assembler** and **NB2 Model**
-- Eight node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model — LiteGraph's built-in nodes are hidden
-- Standard flow: content nodes → Prompt Assembler → NB2 Model → API → image modal
+- Nine node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model, Recraft V4 Pro — LiteGraph's built-in nodes are hidden
+- Standard flow: content nodes → Prompt Assembler → NB2 Model (or Recraft V4 Pro) → API → image modal
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
 
 **Prompt Assembler node**
@@ -35,6 +35,16 @@ This document is a plain English map of the codebase. It is updated after every 
 - Ticking multiple formats enables batch mode — when Generate is clicked on NB2, one image is generated per selected format
 - Selected count is drawn at the bottom of the node (green when formats are active)
 - Clears its format list from `apiClient.js` when removed from the canvas
+
+**Recraft V4 Pro node**
+- Has one input slot that receives the prompt string from the Prompt Assembler
+- Canvas widgets: Image Size (6 named options), Safety Checker (on/off), API Key
+- "Generate" button triggers image generation via the `fal-ai/recraft/v4/pro/text-to-image` endpoint
+- "Cost Settings" button opens the side panel with Budget and Cooldown inputs
+- Flat pricing: always $0.25 per image — no resolution tiers
+- If any upstream content node has a reference image uploaded, a yellow warning banner appears on the node: `⚠ Reference images ignored — text-to-image only`
+- Batch generation (Ad Format node) is not supported — Recraft V4 does not accept an aspect ratio override
+- Bottom of the node shows the same three live stats as NB2 Model: Spent / Est. / Req
 
 **Canvas persistence**
 - The entire canvas state is saved to IndexedDB automatically every 2 seconds
@@ -66,6 +76,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   ├── nodes/
 │   │   ├── PromptAssemblerNode.js    ← Collects connected nodes and assembles the prompt — BUILT
 │   │   ├── NB2ModelNode.js           ← Receives prompt, sends it to fal.ai Nano Banana 2 — BUILT
+│   │   ├── RecraftV4ModelNode.js     ← Receives prompt, sends it to Recraft V4 Pro; warns when reference images detected — BUILT
 │   │   ├── AdFormatNode.js           ← Optional batch node — selects ad formats, triggers multi-format generation — BUILT
 │   │   ├── SubjectNode.js            ← Describes the image subject — BUILT
 │   │   ├── LocationNode.js           ← Describes the environment — BUILT
@@ -90,6 +101,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   ├── ContextControl.js         ← Open/Closed mode — UI disabled, always returns 'open' — BUILT
 │   │   └── formats/
 │   │       ├── falai.js              ← Nano Banana 2 formatter — auto-routes t2i vs edit, cost calc — BUILT
+│   │       ├── recraftV4.js          ← Recraft V4 Pro formatter — text-to-image only, flat $0.25/image — BUILT
 │   │       ├── automatic1111.js      ← Automatic1111 request format — placeholder
 │   │       └── comfyui.js            ← ComfyUI request format — placeholder
 │   └── utils/
@@ -240,6 +252,10 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **`onSerialize` / `onConfigure`** — two LiteGraph hooks that every content node implements. `onSerialize(info)` adds our custom data (`this.values`, `this.images`, `this.selectedFormats`) to the object LiteGraph is about to save. `onConfigure(info)` reads it back when restoring. Without these hooks, custom data would be lost on reload because LiteGraph only saves widget values and positions by default.
 
+**recraftV4.js** — the Recraft V4 Pro request formatter. Always uses the single endpoint `fal-ai/recraft/v4/pro/text-to-image`. Accepts `image_size` (a named string like `"square_hd"`) and `enable_safety_checker` (a boolean). Exports `calculateCost()` with no parameters — always returns `0.25`. No edit endpoint exists for this model.
+
+**RecraftV4ModelNode.js** — model node for Recraft V4 Pro. Same structure as NB2ModelNode but with two widgets instead of five: Image Size (6 named options) and Safety Checker (on/off). Adds `_collectReferenceImages()` — a helper that walks upstream through the Prompt Assembler to check whether any connected content node has images in its `node.images` array. If images are found, a yellow warning banner is drawn on the node via `onDrawForeground()`. `computeSize()` adds 56px extra height when the warning is visible (vs. 36px normally) so the banner never overlaps the widgets.
+
 **ContextControl.js** — currently disabled. The UI is not built. `getMode()` always returns `'open'`. All other functions (setAnchorImageUrl, resetContext) are preserved for re-enabling later without major changes.
 
 **assembleImages()** — a function in `promptAssembler.js` that runs on every graph tick. Iterates all nodes connected to the Prompt Assembler, collects `{ data, label }` from each node's `images` array, and returns a flat array. The Prompt Assembler passes this to `apiClient.js` via `setReferenceImages()`.
@@ -262,8 +278,8 @@ This document is a plain English map of the codebase. It is updated after every 
 
 ## What has not been built yet
 
-- Save/load graph state
-- Flux 2 Flex model node (second model node, same pattern as NB2ModelNode)
+- Save/load graph state to a JSON file
+- Flux 2 Flex model node (third model node, same pattern as NB2ModelNode and RecraftV4ModelNode)
 
 ---
 
@@ -281,5 +297,5 @@ This document is a plain English map of the codebase. It is updated after every 
 The core generation chain is complete: prompt assembly → reference image collection → auto-routing (text-to-image or edit) → fal.ai API call → image modal display → cost tracking. The architecture now supports adding new model nodes independently of the prompt system.
 
 Next planned steps:
-- Add a Flux 2 Flex model node (same pattern as NB2ModelNode, different API endpoint and params)
+- Add a Flux 2 Flex model node (same pattern as NB2ModelNode and RecraftV4ModelNode, different API endpoint and params)
 - Save/load graph state to a JSON file

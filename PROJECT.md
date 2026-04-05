@@ -256,6 +256,7 @@ Build and verify each step in the browser before moving to the next:
 25. ✅ Aspect Ratio widget lock — Aspect Ratio widget on NB2 Model node is automatically disabled when an Ad Format node is connected upstream with formats selected; re-enables when disconnected or formats cleared; implemented via `_isAspectRatioOverridden()` helper called on every tick
 26. ✅ Batch cost estimate — Est. figure on NB2 Model node now shows total batch cost (base cost × format count); implemented via `_getFormatCount()` helper reading `selectedFormats.length` from the upstream Ad Format node
 27. ✅ IndexedDB persistence — canvas state (nodes, connections, text, widget values, reference images, ad format selections) saved to IndexedDB every 2 seconds and restored on page reload; `storageUtils.js` wraps the IndexedDB API; `onSerialize`/`onConfigure` added to all content nodes and AdFormatNode
+28. ✅ Recraft V4 Pro model node — second working model node; `recraftV4.js` formatter (flat $0.25/image, named `image_size`, boolean `enable_safety_checker`); `RecraftV4ModelNode.js` with Image Size + Safety widgets; reference image warning banner drawn on canvas when upstream nodes have images; dispatched in `apiClient.js` alongside NB2
 
 ---
 

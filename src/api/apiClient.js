@@ -7,6 +7,7 @@
 import { getSettings, getFormat } from './ApiPanel.js'
 import { buildRequest as buildGenericRequest } from './genericRest.js'
 import { buildRequest as buildFalaiRequest, parseResponse as parseFalaiResponse, calculateCost } from './formats/falai.js'
+import { buildRequest as buildRecraftRequest, parseResponse as parseRecraftResponse, calculateCost as calculateRecraftCost } from './formats/recraftV4.js'
 import { canGenerate, recordGeneration, updateEstimate, addSpent } from './CostControl.js'
 import { getMode, getAnchorImageUrl, setAnchorImageUrl } from './ContextControl.js'
 import { showImage } from '../panel/ImageModal.js'
@@ -147,9 +148,17 @@ async function _generateSingle() {
   log('Sending request…', 'info')
 
   const settings = { url: '', apiKey: _apiKey }
-  const { url, options } = _format === 'Nano Banana 2'
-    ? buildFalaiRequest(_currentPrompt, settings, _generationParams, getMode(), getAnchorImageUrl(), _referenceImages)
-    : buildGenericRequest(_currentPrompt, settings)
+
+  // Pick the right formatter based on which model node is active
+  let requestData
+  if (_format === 'Nano Banana 2') {
+    requestData = buildFalaiRequest(_currentPrompt, settings, _generationParams, getMode(), getAnchorImageUrl(), _referenceImages)
+  } else if (_format === 'Recraft V4') {
+    requestData = buildRecraftRequest(_currentPrompt, settings, _generationParams)
+  } else {
+    requestData = buildGenericRequest(_currentPrompt, settings)
+  }
+  const { url, options } = requestData
 
   try {
     const response = await fetch(url, options)
@@ -166,6 +175,15 @@ async function _generateSingle() {
         setAnchorImageUrl(imageUrls[0])
       }
       const cost = calculateCost(_generationParams)
+      addSpent(cost)
+      log(`Generated ${imageUrls.length} image(s) — ~$${cost.toFixed(3)} this request`, 'success')
+    } else if (_format === 'Recraft V4') {
+      const imageUrls = parseRecraftResponse(data)
+      if (imageUrls.length > 0) {
+        showImage(imageUrls.map(url => ({ url, label: null })))
+        setAnchorImageUrl(imageUrls[0])
+      }
+      const cost = calculateRecraftCost()
       addSpent(cost)
       log(`Generated ${imageUrls.length} image(s) — ~$${cost.toFixed(3)} this request`, 'success')
     }

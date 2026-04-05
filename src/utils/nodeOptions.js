@@ -161,3 +161,18 @@ export const FALAI_RESOLUTION = ['0.5K', '1K', '2K', '4K']
 // API format selector — controls which formatter apiClient uses
 export const API_FORMAT = ['Generic REST', 'fal.ai']
 
+// ─── Recraft V4 Pro Node ──────────────────────────────────────────────────────
+
+// Named image sizes from the Recraft V4 Pro API docs
+export const RECRAFT_IMAGE_SIZE = [
+  'square_hd',
+  'square',
+  'portrait_4_3',
+  'portrait_16_9',
+  'landscape_4_3',
+  'landscape_16_9',
+]
+
+// Safety checker toggle — maps to the enable_safety_checker boolean in the API
+export const RECRAFT_SAFETY = ['on', 'off']
+
