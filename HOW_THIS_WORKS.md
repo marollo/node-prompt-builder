@@ -7,7 +7,7 @@ This document is a plain English map of the codebase. It is updated after every 
 ## What exists right now
 
 - A dark LiteGraph canvas fills the full browser window
-- Two nodes appear on the canvas at startup: **Prompt Assembler** and **NB2 Model**
+- One node appears on the canvas at startup: **Prompt Assembler** — the user adds whichever model node they need from the search list
 - Nine node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model, Recraft V4 Pro — LiteGraph's built-in nodes are hidden
 - Standard flow: content nodes → Prompt Assembler → NB2 Model (or Recraft V4 Pro) → API → image modal
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
@@ -49,12 +49,12 @@ This document is a plain English map of the codebase. It is updated after every 
 **Canvas persistence**
 - The entire canvas state is saved to IndexedDB automatically every 2 seconds
 - On page reload, the saved state is restored — all nodes, positions, connections, text, widget values, reference images, and selected ad formats come back exactly as they were
-- First run (nothing saved yet) shows the default empty canvas with one Prompt Assembler and one NB2 Model node
+- First run (nothing saved yet) shows the default canvas with only the Prompt Assembler node
 
 **New Project button**
 - A small "New Project" button sits fixed in the top-right corner of the canvas
 - Clicking it shows a confirmation dialog — if confirmed, all nodes are cleared from the canvas and IndexedDB is wiped (`saveGraph(null)`)
-- The two default starter nodes (Prompt Assembler + NB2 Model) are immediately recreated so the canvas is never left empty
+- The default Prompt Assembler node is immediately recreated so the canvas is never left empty
 - When the side panel is open, the button shifts left automatically so it is never hidden behind the panel
 
 **Shared behaviour**

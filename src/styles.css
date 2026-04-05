@@ -22,6 +22,8 @@ html, body {
      If these differ the browser stretches the canvas and LiteGraph maps
      mouse clicks to the wrong coordinates. */
   height: calc(100vh - 80px);
+  /* Suppress the browser's default blue focus ring on the canvas element */
+  outline: none;
 }
 
 /* ─── Properties side panel ──────────────────────────────────────────────────

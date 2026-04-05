@@ -56,6 +56,9 @@ export async function initCanvas() {
   graphCanvas.background_image = null
   graphCanvas.clear_background_color = '#1a1a1a'
 
+  // Disable LiteGraph's built-in dark-blue border drawn around the canvas edge
+  graphCanvas.render_canvas_border = false
+
   // Resize the canvas whenever the browser window is resized
   window.addEventListener('resize', () => {
     canvasEl.width  = window.innerWidth
@@ -70,14 +73,10 @@ export async function initCanvas() {
     // Saved state found — restore all nodes, connections, and custom data
     graph.configure(saved)
   } else {
-    // First run — create the two default starter nodes
+    // First run — create the default starter node
     const assemblerNode = LiteGraph.createNode('prompt/PromptAssembler')
     graph.add(assemblerNode)
     assemblerNode.pos = [300, 200]
-
-    const modelNode = LiteGraph.createNode('prompt/NB2Model')
-    graph.add(modelNode)
-    modelNode.pos = [650, 200]
   }
 
   // Auto-save the graph to IndexedDB every 2 seconds.
@@ -116,13 +115,9 @@ function _addNewProjectButton(graph) {
     // Wipe the IndexedDB save so the next page reload also starts fresh
     saveGraph(null)
 
-    // Recreate the two default starter nodes
+    // Recreate the default starter node
     const assemblerNode = LiteGraph.createNode('prompt/PromptAssembler')
     graph.add(assemblerNode)
     assemblerNode.pos = [300, 200]
-
-    const modelNode = LiteGraph.createNode('prompt/NB2Model')
-    graph.add(modelNode)
-    modelNode.pos = [650, 200]
   })
 }
