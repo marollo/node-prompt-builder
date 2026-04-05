@@ -82,8 +82,8 @@ export function open(node) {
     buildImageSection(node, content)
   }
 
-  // NB2 Model node gets the cost settings section (budget and cooldown)
-  if (node.title === 'NB2 Model') {
+  // Model nodes get the cost settings section (budget and cooldown)
+  if (node.title === 'NB2 Model' || node.title === 'Recraft V4 Pro') {
     const costContainer = document.createElement('div')
     costContainer.id = 'cost-section'
     content.appendChild(costContainer)

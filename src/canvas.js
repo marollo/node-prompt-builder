@@ -70,6 +70,16 @@ export async function initCanvas() {
   const saved = await loadGraph()
 
   if (saved) {
+    // Migrate old node type strings — model nodes moved from prompt/ to model/ category.
+    // Without this, any graph saved before the rename would create broken ghost nodes
+    // for the unknown types, corrupting the graph state and breaking all connections.
+    if (saved.nodes) {
+      saved.nodes.forEach(node => {
+        if (node.type === 'prompt/NB2Model')       node.type = 'model/NB2Model'
+        if (node.type === 'prompt/RecraftV4Model') node.type = 'model/RecraftV4Model'
+      })
+    }
+
     // Saved state found — restore all nodes, connections, and custom data
     graph.configure(saved)
   } else {
