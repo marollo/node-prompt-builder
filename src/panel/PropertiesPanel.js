@@ -9,6 +9,7 @@
 import { getSettings, getFormat } from '../api/ApiPanel.js'
 import { initCostUI } from '../api/CostControl.js'
 import { generate } from '../api/apiClient.js'
+import { describeImage } from '../api/claudeClient.js'
 
 // The panel DOM element — created once, reused on every open() call
 let panelEl = null
@@ -121,9 +122,10 @@ function buildApiSection(content) {
   section.className = 'api-settings-section'
 
   // Read the previously entered values so they are not lost on panel reopen
-  const prevUrl    = document.getElementById('api-url')?.value    || ''
-  const prevKey    = document.getElementById('api-key')?.value    || ''
-  const prevFormat = document.getElementById('api-format')?.value || 'Nano Banana 2'
+  const prevUrl       = document.getElementById('api-url')?.value       || ''
+  const prevKey       = document.getElementById('api-key')?.value       || ''
+  const prevFormat    = document.getElementById('api-format')?.value    || 'Nano Banana 2'
+  const prevClaudeKey = document.getElementById('claude-api-key')?.value || ''
 
   section.innerHTML = `
     <div class="panel-section-title">API Settings</div>
@@ -143,6 +145,11 @@ function buildApiSection(content) {
       API Key
       <input id="api-key" type="password" class="panel-input"
              placeholder="sk-..." value="${prevKey}" />
+    </label>
+    <label class="panel-field-label">
+      Claude API Key <span class="panel-optional">(for Describe)</span>
+      <input id="claude-api-key" type="password" class="panel-input"
+             placeholder="sk-ant-..." value="${prevClaudeKey}" />
     </label>
   `
 
@@ -232,6 +239,33 @@ function renderSlots(node, slotsContainer, addBtn) {
     labelInput.addEventListener('input', () => {
       node.images[i].label = labelInput.value
     })
+
+    // Describe button — sends this image to Claude and fills the node's first text field
+    if (node.claudePrompt) {
+      const describeBtn = document.createElement('button')
+      describeBtn.className = 'image-describe-btn'
+      describeBtn.textContent = 'Describe'
+      describeBtn.addEventListener('click', async () => {
+        describeBtn.textContent = '…'
+        describeBtn.disabled = true
+
+        // Call Claude with this image and the node's system prompt
+        const result = await describeImage(img.data, node.claudePrompt)
+
+        // Write the result into the node's first editable value
+        const firstKey = node.panelFields.find(f => !f.readonly)?.key
+        if (firstKey) {
+          node.values[firstKey] = result
+          // If the panel textarea is currently visible, update it live
+          const textarea = panelEl.querySelector(`textarea:not(.readonly)`)
+          if (textarea) textarea.value = result
+        }
+
+        describeBtn.textContent = 'Describe'
+        describeBtn.disabled = false
+      })
+      slot.appendChild(describeBtn)
+    }
 
     // Remove button — splices this image out and redraws the list
     const removeBtn = document.createElement('button')

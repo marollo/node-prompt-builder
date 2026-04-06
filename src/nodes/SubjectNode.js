@@ -6,6 +6,7 @@
 import { LiteGraph } from 'litegraph.js'
 import { SUBJECT_COUNT, SUBJECT_POSITION } from '../utils/nodeOptions.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
+import subjectPrompt from '../prompts/subject.md?raw'
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,10 @@ function SubjectNode() {
   // Stores reference images uploaded via the side panel — each entry is { data }
   // where data is a base64 image string
   this.images = []
+
+  // The system prompt sent to Claude when the user clicks "Describe" on an image slot.
+  // Loaded from src/prompts/subject.md at build time — not editable by the end user.
+  this.claudePrompt = subjectPrompt
 
   // Label sent to the API to identify what role these images play
   this.referenceLabel = 'subject reference'

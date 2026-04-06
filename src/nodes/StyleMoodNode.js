@@ -6,6 +6,7 @@
 import { LiteGraph } from 'litegraph.js'
 import { STYLE_VISUAL, STYLE_MOOD } from '../utils/nodeOptions.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
+import styleMoodPrompt from '../prompts/styleMood.md?raw'
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,9 @@ function StyleMoodNode() {
 
   // Stores reference images uploaded via the side panel — each entry is { data }
   this.images = []
+
+  // System prompt sent to Claude when the user clicks "Describe" on an image slot
+  this.claudePrompt = styleMoodPrompt
 
   // Label sent to the API to identify what role these images play
   this.referenceLabel = 'style reference'

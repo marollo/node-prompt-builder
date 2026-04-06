@@ -6,6 +6,7 @@
 import { LiteGraph } from 'litegraph.js'
 import { CAMERA_ANGLE, CAMERA_FOCAL_LENGTH } from '../utils/nodeOptions.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
+import cameraPrompt from '../prompts/camera.md?raw'
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,9 @@ function CameraNode() {
 
   // Stores reference images uploaded via the side panel — each entry is { data }
   this.images = []
+
+  // System prompt sent to Claude when the user clicks "Describe" on an image slot
+  this.claudePrompt = cameraPrompt
 
   // Label sent to the API to identify what role these images play
   this.referenceLabel = 'camera reference'

@@ -6,6 +6,7 @@
 import { LiteGraph } from 'litegraph.js'
 import { LIGHTING_STYLE, LIGHTING_TIME_OF_DAY } from '../utils/nodeOptions.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
+import lightingPrompt from '../prompts/lighting.md?raw'
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,9 @@ function LightingNode() {
 
   // Stores reference images uploaded via the side panel — each entry is { data }
   this.images = []
+
+  // System prompt sent to Claude when the user clicks "Describe" on an image slot
+  this.claudePrompt = lightingPrompt
 
   // Label sent to the API to identify what role these images play
   this.referenceLabel = 'lighting reference'

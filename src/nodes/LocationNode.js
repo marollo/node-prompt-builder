@@ -6,6 +6,7 @@
 import { LiteGraph } from 'litegraph.js'
 import { LOCATION_SETTING_TYPE, LOCATION_ATMOSPHERE } from '../utils/nodeOptions.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
+import locationPrompt from '../prompts/location.md?raw'
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,9 @@ function LocationNode() {
 
   // Stores reference images uploaded via the side panel — each entry is { data }
   this.images = []
+
+  // System prompt sent to Claude when the user clicks "Describe" on an image slot
+  this.claudePrompt = locationPrompt
 
   // Label sent to the API to identify what role these images play
   this.referenceLabel = 'location reference'

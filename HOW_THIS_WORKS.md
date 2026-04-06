@@ -57,6 +57,14 @@ This document is a plain English map of the codebase. It is updated after every 
 - The default Prompt Assembler node is immediately recreated so the canvas is never left empty
 - When the side panel is open, the button shifts left automatically so it is never hidden behind the panel
 
+**Claude image-to-text ("Describe" button)**
+- Every image slot in the side panel has a "Describe" button next to the ✕ remove button
+- Clicking it sends that specific image to the Claude API together with a system prompt tailored to the node type (e.g. the Subject node asks for subject description only; the Lighting node asks for lighting description only)
+- While Claude is thinking the button shows "…" and is disabled; when the response arrives it fills the node's first text field automatically and updates the textarea live
+- The system prompts are stored as `.md` files in `src/prompts/` — one per content node — and are loaded at build time by Vite's `?raw` import. They are not visible to the end user
+- A separate "Claude API Key" password field is shown in the API Settings section of the side panel (below the existing API key)
+- If no Claude API key is set, the button fills the text field with a readable error message instead of crashing
+
 **Shared behaviour**
 - The assembled prompt uses sentence structure: each node's contribution is a separate clause capitalised at the start, joined with `". "`
 - When a node has reference images uploaded, its section opens with `"Using the provided [label], "` — following the multimodal prompting formula
@@ -102,6 +110,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   ├── api/
 │   │   ├── ApiPanel.js               ← Getter functions for Model, URL, API key — read from side panel DOM — BUILT
 │   │   ├── apiClient.js              ← Sends prompt + reference images to API; stores latest state — BUILT
+│   │   ├── claudeClient.js           ← Sends one image + a system prompt to Claude; returns description text — BUILT
 │   │   ├── genericRest.js            ← Shapes prompt into a generic REST request body — BUILT
 │   │   ├── CostControl.js            ← Budget, spend, cooldown — state in module vars, UI built on demand — BUILT
 │   │   ├── ContextControl.js         ← Open/Closed mode — UI disabled, always returns 'open' — BUILT
@@ -110,6 +119,12 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │       ├── recraftV4.js          ← Recraft V4 Pro formatter — text-to-image only, flat $0.25/image — BUILT
 │   │       ├── automatic1111.js      ← Automatic1111 request format — placeholder
 │   │       └── comfyui.js            ← ComfyUI request format — placeholder
+│   ├── prompts/
+│   │   ├── subject.md                ← System prompt sent to Claude when "Describe" is clicked on a Subject node image
+│   │   ├── location.md               ← System prompt for Location node image description
+│   │   ├── camera.md                 ← System prompt for Camera node image description
+│   │   ├── lighting.md               ← System prompt for Lighting node image description
+│   │   └── styleMood.md              ← System prompt for Style/Mood node image description
 │   └── utils/
 │       ├── nodeOptions.js            ← All dropdown data for all nodes — BUILT
 │       ├── imageUtils.js             ← Image helpers — placeholder
@@ -261,6 +276,10 @@ This document is a plain English map of the codebase. It is updated after every 
 **recraftV4.js** — the Recraft V4 Pro request formatter. Always uses the single endpoint `fal-ai/recraft/v4/pro/text-to-image`. Accepts `image_size` (a named string like `"square_hd"`) and `enable_safety_checker` (a boolean). Exports `calculateCost()` with no parameters — always returns `0.25`. No edit endpoint exists for this model.
 
 **RecraftV4ModelNode.js** — model node for Recraft V4 Pro. Same structure as NB2ModelNode but with two widgets instead of five: Image Size (6 named options) and Safety Checker (on/off). Adds `_collectReferenceImages()` — a helper that walks upstream through the Prompt Assembler to check whether any connected content node has images in its `node.images` array. If images are found, a yellow warning banner is drawn on the node via `onDrawForeground()`. `computeSize()` adds 56px extra height when the warning is visible (vs. 36px normally) so the banner never overlaps the widgets.
+
+**claudeClient.js** — sends a single reference image and a system prompt to the Anthropic Claude API (`claude-haiku`) and returns the text description. Called when the user clicks "Describe" on an image slot in the side panel. It strips the `data:image/jpeg;base64,` prefix that browsers add to base64 URLs (Claude's API requires the raw data and the media type separately), sends both in a structured message, and returns the first text block from the response. If the Claude API key is missing or invalid, it returns a plain-English error string instead of throwing.
+
+**`src/prompts/*.md`** — one `.md` file per content node, each containing a system prompt written for that node's specific job. The Subject prompt asks Claude to describe only the main subject; the Lighting prompt asks only about light source, direction, and quality; and so on. Loaded at build time using Vite's `?raw` import (e.g. `import subjectPrompt from '../prompts/subject.md?raw'`). The file content becomes a plain JavaScript string stored as `this.claudePrompt` on the node. The end user never sees these files — only the tool creator edits them.
 
 **ContextControl.js** — currently disabled. The UI is not built. `getMode()` always returns `'open'`. All other functions (setAnchorImageUrl, resetContext) are preserved for re-enabling later without major changes.
 
