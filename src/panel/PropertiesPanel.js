@@ -122,10 +122,9 @@ function buildApiSection(content) {
   section.className = 'api-settings-section'
 
   // Read the previously entered values so they are not lost on panel reopen
-  const prevUrl       = document.getElementById('api-url')?.value       || ''
-  const prevKey       = document.getElementById('api-key')?.value       || ''
-  const prevFormat    = document.getElementById('api-format')?.value    || 'Nano Banana 2'
-  const prevClaudeKey = document.getElementById('claude-api-key')?.value || ''
+  const prevUrl    = document.getElementById('api-url')?.value    || ''
+  const prevKey    = document.getElementById('api-key')?.value    || ''
+  const prevFormat = document.getElementById('api-format')?.value || 'Nano Banana 2'
 
   section.innerHTML = `
     <div class="panel-section-title">API Settings</div>
@@ -145,11 +144,6 @@ function buildApiSection(content) {
       API Key
       <input id="api-key" type="password" class="panel-input"
              placeholder="sk-..." value="${prevKey}" />
-    </label>
-    <label class="panel-field-label">
-      Claude API Key <span class="panel-optional">(for Describe)</span>
-      <input id="claude-api-key" type="password" class="panel-input"
-             placeholder="sk-ant-..." value="${prevClaudeKey}" />
     </label>
   `
 
@@ -252,13 +246,20 @@ function renderSlots(node, slotsContainer, addBtn) {
         // Call Claude with this image and the node's system prompt
         const result = await describeImage(img.data, node.claudePrompt)
 
-        // Write the result into the node's first editable value
-        const firstKey = node.panelFields.find(f => !f.readonly)?.key
-        if (firstKey) {
-          node.values[firstKey] = result
-          // If the panel textarea is currently visible, update it live
-          const textarea = panelEl.querySelector(`textarea:not(.readonly)`)
-          if (textarea) textarea.value = result
+        // Only write to the node if Claude returned a valid result (null means an error was logged)
+        // result is { text, cost } on success, or null on error
+        if (result) {
+          // Accumulate cost and call count on the node so the canvas bar stays accurate
+          node.claudeSpent     = (node.claudeSpent     || 0) + result.cost
+          node.claudeCallCount = (node.claudeCallCount || 0) + 1
+
+          const firstKey = node.panelFields.find(f => !f.readonly)?.key
+          if (firstKey) {
+            node.values[firstKey] = result.text
+            // If the panel textarea is currently visible, update it live
+            const textarea = panelEl.querySelector(`textarea:not(.readonly)`)
+            if (textarea) textarea.value = result.text
+          }
         }
 
         describeBtn.textContent = 'Describe'

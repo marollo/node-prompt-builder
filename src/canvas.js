@@ -5,6 +5,7 @@
 
 import { LGraph, LGraphCanvas, LiteGraph } from 'litegraph.js'
 import { saveGraph, loadGraph } from './utils/storageUtils.js'
+import { openSettings } from './panel/SettingsModal.js'
 
 // Import node types — each import registers them with LiteGraph automatically
 import './nodes/PromptAssemblerNode.js'
@@ -97,10 +98,25 @@ export async function initCanvas() {
   // Add the "New Project" button to the top-right corner of the screen
   _addNewProjectButton(graph)
 
+  // Add the "Settings" button to the top-left corner of the screen
+  _addSettingsButton()
+
   // Start the graph — begins the render loop
   graph.start()
 
   return graph
+}
+
+/**
+ * Creates and injects the "Settings" button into the top-left corner.
+ * Clicking it opens the settings modal where the Claude API key can be entered.
+ */
+function _addSettingsButton() {
+  const btn = document.createElement('button')
+  btn.id = 'settings-btn'
+  btn.textContent = 'Settings'
+  document.body.appendChild(btn)
+  btn.addEventListener('click', openSettings)
 }
 
 /**

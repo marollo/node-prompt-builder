@@ -57,13 +57,22 @@ This document is a plain English map of the codebase. It is updated after every 
 - The default Prompt Assembler node is immediately recreated so the canvas is never left empty
 - When the side panel is open, the button shifts left automatically so it is never hidden behind the panel
 
+**Settings button and modal**
+- A small "Settings" button sits fixed in the top-left corner of the canvas
+- Clicking it opens a modal with two fields: Claude API Key (password input) and Claude Model (dropdown)
+- Three models are available: Haiku 4.5 (fast & cheap), Sonnet 4.6 (balanced), Opus 4.6 (most capable)
+- Below the model dropdown, a small greyed-out line shows the current model's pricing: `Input $X.XX / 1M tokens  ·  Output $X.XX / 1M tokens` — updates live when the dropdown changes
+- Both values are saved to `localStorage` immediately as the user types or selects — no Save button needed
+- The modal closes with ✕ or by clicking the dark backdrop behind it
+
 **Claude image-to-text ("Describe" button)**
 - Every image slot in the side panel has a "Describe" button next to the ✕ remove button
 - Clicking it sends that specific image to the Claude API together with a system prompt tailored to the node type (e.g. the Subject node asks for subject description only; the Lighting node asks for lighting description only)
 - While Claude is thinking the button shows "…" and is disabled; when the response arrives it fills the node's first text field automatically and updates the textarea live
 - The system prompts are stored as `.md` files in `src/prompts/` — one per content node — and are loaded at build time by Vite's `?raw` import. They are not visible to the end user
-- A separate "Claude API Key" password field is shown in the API Settings section of the side panel (below the existing API key)
-- If no Claude API key is set, the button fills the text field with a readable error message instead of crashing
+- The Claude API key and model are set in the Settings modal (top-left button) and stored in `localStorage`
+- If no Claude API key is set, the error is sent to the log bar and the text field is left untouched
+- After each successful Describe call, the exact cost (calculated from the token counts returned by the API) is accumulated on the node and drawn at the bottom of the node card on the canvas: `$0.0000 · N calls`
 
 **Shared behaviour**
 - The assembled prompt uses sentence structure: each node's contribution is a separate clause capitalised at the start, joined with `". "`
@@ -100,6 +109,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   └── ReferenceImageNode.js     ← Standalone reference image node — placeholder (not built)
 │   ├── panel/
 │   │   ├── PropertiesPanel.js        ← Side panel for editing node text fields and images — BUILT
+│   │   ├── SettingsModal.js          ← Modal for Claude API key and model selection — BUILT
 │   │   ├── AdFormatPanel.js          ← Checkbox panel for selecting ad formats grouped by platform — BUILT
 │   │   ├── ImageModal.js             ← Full-screen overlay showing generated images with optional labels — BUILT
 │   │   ├── LogPanel.js               ← Fixed bottom bar showing API responses and errors — BUILT
@@ -127,6 +137,8 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   └── styleMood.md              ← System prompt for Style/Mood node image description
 │   └── utils/
 │       ├── nodeOptions.js            ← All dropdown data for all nodes — BUILT
+│       ├── claudePricing.js          ← Pricing table for all Claude models — single source of truth — BUILT
+│       ├── claudeNodeDraw.js         ← Shared canvas drawing utility for Claude stats bar on content nodes — BUILT
 │       ├── imageUtils.js             ← Image helpers — placeholder
 │       └── storageUtils.js           ← IndexedDB save/load wrapper — BUILT
 ├── public/                           ← Static assets (empty for now)
@@ -277,7 +289,13 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **RecraftV4ModelNode.js** — model node for Recraft V4 Pro. Same structure as NB2ModelNode but with two widgets instead of five: Image Size (6 named options) and Safety Checker (on/off). Adds `_collectReferenceImages()` — a helper that walks upstream through the Prompt Assembler to check whether any connected content node has images in its `node.images` array. If images are found, a yellow warning banner is drawn on the node via `onDrawForeground()`. `computeSize()` adds 56px extra height when the warning is visible (vs. 36px normally) so the banner never overlaps the widgets.
 
-**claudeClient.js** — sends a single reference image and a system prompt to the Anthropic Claude API (`claude-haiku`) and returns the text description. Called when the user clicks "Describe" on an image slot in the side panel. It strips the `data:image/jpeg;base64,` prefix that browsers add to base64 URLs (Claude's API requires the raw data and the media type separately), sends both in a structured message, and returns the first text block from the response. If the Claude API key is missing or invalid, it returns a plain-English error string instead of throwing.
+**claudeClient.js** — sends a single reference image and a system prompt to the Anthropic Claude API and returns `{ text, cost }` on success or `null` on failure. The model used is read from `localStorage` (set in the Settings modal) and falls back to Haiku if nothing is saved. The API key is also read from `localStorage`. It strips the `data:image/jpeg;base64,` prefix that browsers add to base64 URLs (Claude's API requires the raw data and the media type separately). On success, it calculates the exact cost from `response.usage.input_tokens` and `response.usage.output_tokens` using `claudePricing.js`. On error (missing key, bad response, unexpected format), it sends a message to the log bar and returns `null` so the caller knows not to update the text field.
+
+**claudePricing.js** — the single pricing table for all three Claude models. Stores input and output prices per 1 million tokens. Exports `calculateClaudeCost(model, inputTokens, outputTokens)` which returns the exact dollar cost of one API call. Imported by both `SettingsModal.js` (for the live pricing display) and `claudeClient.js` (for post-call cost calculation). Prices are defined in one place so they never get out of sync.
+
+**claudeNodeDraw.js** — a utility that adds canvas drawing behaviour to any content node class. Called once per node class with `addClaudeStatsDrawing(NodeClass)`. Attaches two methods: `computeSize` (extends node height by 28px) and `onDrawForeground` (draws a separator line and cost stats at the bottom of the node). Before any Describe calls the bar shows `Claude: –`; after calls it shows `$0.0000 · N calls`. Using a shared utility avoids copy-pasting identical canvas code into all five content node files.
+
+**SettingsModal.js** — builds a full-screen modal overlay triggered by the Settings button. Contains a Claude API Key password input and a Claude Model dropdown. A live pricing line below the dropdown shows the input/output cost for the selected model and updates when the dropdown changes. Both values are saved to `localStorage` on every change — no explicit Save button. The modal is created once and toggled visible; the backdrop click and ✕ button both close it.
 
 **`src/prompts/*.md`** — one `.md` file per content node, each containing a system prompt written for that node's specific job. The Subject prompt asks Claude to describe only the main subject; the Lighting prompt asks only about light source, direction, and quality; and so on. Loaded at build time using Vite's `?raw` import (e.g. `import subjectPrompt from '../prompts/subject.md?raw'`). The file content becomes a plain JavaScript string stored as `this.claudePrompt` on the node. The end user never sees these files — only the tool creator edits them.
 

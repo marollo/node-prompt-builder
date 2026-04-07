@@ -196,6 +196,83 @@ html, body {
 
 .add-image-btn:hover { border-color: #888; color: #e0e0e0; }
 
+/* ─── Settings button ────────────────────────────────────────────────────────
+   Fixed in the top-left corner of the canvas.
+   Opens the Settings modal where the Claude API key can be entered.
+   ─────────────────────────────────────────────────────────────────────────── */
+#settings-btn {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 150;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #888;
+  font-size: 12px;
+  font-family: sans-serif;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+#settings-btn:hover {
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+/* ─── Settings modal ─────────────────────────────────────────────────────────
+   Full-screen dark overlay — clicking it closes the modal.
+   The white box in the center holds the settings fields.
+   ─────────────────────────────────────────────────────────────────────────── */
+#settings-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+}
+
+#settings-modal-box {
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  padding: 24px;
+  width: 320px;
+  position: relative;
+}
+
+#settings-modal-title {
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  font-family: sans-serif;
+  color: #e0e0e0;
+  font-weight: 600;
+}
+
+#settings-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+#settings-modal-close:hover { color: #e0e0e0; }
+
+/* Small greyed-out line showing the price per token for the selected model */
+#settings-price-info {
+  margin-top: 6px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #666;
+}
+
 /* ─── New Project button ─────────────────────────────────────────────────────
    Fixed in the top-right corner of the canvas.
    Always visible — clicking it clears all nodes and resets the project.

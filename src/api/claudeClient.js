@@ -4,18 +4,26 @@
  * Used by the "Describe" button in the side panel to auto-fill a node's text field.
  */
 
+import { log } from '../panel/LogPanel.js'
+import { DEFAULT_MODEL, calculateClaudeCost } from '../utils/claudePricing.js'
+
 // The Claude API endpoint for sending messages
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages'
 
-// The Claude model used for image analysis — Haiku is fast and cheap for this task
-const CLAUDE_MODEL = 'claude-haiku-4-5-20251001'
-
 /**
- * Reads the Claude API key from the side panel input field.
- * Returns an empty string if the field does not exist yet.
+ * Reads the Claude API key from localStorage.
+ * The key is saved there by the Settings modal whenever the user types it in.
  */
 function getClaudeApiKey() {
-  return (document.getElementById('claude-api-key')?.value || '').trim()
+  return (localStorage.getItem('claude-api-key') || '').trim()
+}
+
+/**
+ * Reads the selected Claude model from localStorage.
+ * Falls back to Haiku if the user has not opened Settings yet.
+ */
+function getClaudeModel() {
+  return localStorage.getItem('claude-model') || DEFAULT_MODEL
 }
 
 /**
@@ -46,7 +54,9 @@ async function describeImage(imageDataUrl, systemPrompt) {
   const apiKey = getClaudeApiKey()
 
   if (!apiKey) {
-    return 'Error: no Claude API key set. Add it in the API Settings panel.'
+    // Send the error to the log bar at the bottom — do not fill the node's text field
+    log('No Claude API key set. Add it in the API Settings panel.', 'error')
+    return null
   }
 
   const { mediaType, data } = parseDataUrl(imageDataUrl)
@@ -59,7 +69,7 @@ async function describeImage(imageDataUrl, systemPrompt) {
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model:      CLAUDE_MODEL,
+      model:      getClaudeModel(),
       max_tokens: 256,
       system:     systemPrompt,
       messages: [{
@@ -82,13 +92,24 @@ async function describeImage(imageDataUrl, systemPrompt) {
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
-    return 'Error: ' + (err?.error?.message || response.statusText)
+    log('Claude error: ' + (err?.error?.message || response.statusText), 'error')
+    return null
   }
 
   const result = await response.json()
 
   // Claude returns an array of content blocks — we want the first text block
-  return result?.content?.[0]?.text || 'Error: unexpected response format.'
+  const text = result?.content?.[0]?.text
+  if (!text) {
+    log('Claude returned an unexpected response format.', 'error')
+    return null
+  }
+
+  // Calculate the exact cost from the token counts the API reported
+  const model = getClaudeModel()
+  const cost  = calculateClaudeCost(model, result.usage.input_tokens, result.usage.output_tokens)
+
+  return { text, cost }
 }
 
 export { describeImage }

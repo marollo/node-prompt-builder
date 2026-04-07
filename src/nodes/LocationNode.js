@@ -7,6 +7,7 @@ import { LiteGraph } from 'litegraph.js'
 import { LOCATION_SETTING_TYPE, LOCATION_ATMOSPHERE } from '../utils/nodeOptions.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
 import locationPrompt from '../prompts/location.md?raw'
+import { addClaudeStatsDrawing } from '../utils/claudeNodeDraw.js'
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,10 @@ function LocationNode() {
 
   // System prompt sent to Claude when the user clicks "Describe" on an image slot
   this.claudePrompt = locationPrompt
+
+  // Tracks total Claude API cost and call count for the stats bar drawn on the canvas
+  this.claudeSpent     = 0
+  this.claudeCallCount = 0
 
   // Label sent to the API to identify what role these images play
   this.referenceLabel = 'location reference'
@@ -106,6 +111,10 @@ LocationNode.prototype.onConfigure = function (info) {
   if (info.extra.values) this.values = info.extra.values
   if (info.extra.images) this.images = info.extra.images
 }
+
+// ─── Claude stats bar ─────────────────────────────────────────────────────────
+
+addClaudeStatsDrawing(LocationNode)
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
