@@ -17,12 +17,13 @@ import './nodes/LocationNode.js'
 import './nodes/CameraNode.js'
 import './nodes/LightingNode.js'
 import './nodes/StyleMoodNode.js'
+import './nodes/ImageNode.js'
 
 // Remove all built-in LiteGraph node types so only our custom nodes appear
 // in the search list when the user double-clicks the canvas.
 // Our nodes are registered under 'prompt/' (content nodes) and 'model/' (model nodes).
 for (const type in LiteGraph.registered_node_types) {
-  if (!type.startsWith('prompt/') && !type.startsWith('model/')) {
+  if (!type.startsWith('prompt/') && !type.startsWith('model/') && !type.startsWith('media/')) {
     delete LiteGraph.registered_node_types[type]
   }
 }
@@ -46,12 +47,33 @@ export async function initCanvas() {
   // extend behind the bar and hide nodes placed near the bottom of the window
   const LOG_BAR_HEIGHT = 80
 
-  // Size the canvas to fill the window above the log bar
-  canvasEl.width  = window.innerWidth
-  canvasEl.height = window.innerHeight - LOG_BAR_HEIGHT
+  // On Retina / HiDPI screens the physical pixel density is 2× (or more).
+  // Setting the canvas pixel buffer to CSS size produces blurry rendering.
+  // Multiplying by devicePixelRatio makes the buffer match the physical screen pixels.
+  const dpr = window.devicePixelRatio || 1
+
+  // Size the canvas pixel buffer at full physical resolution
+  canvasEl.width  = window.innerWidth  * dpr
+  canvasEl.height = (window.innerHeight - LOG_BAR_HEIGHT) * dpr
+
+  // Keep the CSS display size unchanged so the canvas fills the same area on screen
+  canvasEl.style.width  = window.innerWidth + 'px'
+  canvasEl.style.height = (window.innerHeight - LOG_BAR_HEIGHT) + 'px'
 
   // Create the renderer — draws the graph onto the canvas element
   const graphCanvas = new LGraphCanvas(canvasEl, graph)
+
+  // Patch LiteGraph's coordinate-to-canvas transform to include the dpr scale.
+  // toCanvasContext is called before every graph draw to apply zoom and pan.
+  // By prepending ctx.scale(dpr, dpr) here, the pixel buffer is used at full
+  // physical resolution without touching ds.scale — which controls zoom level
+  // and must stay at 1 so click coordinates remain correct.
+  const ds = graphCanvas.ds
+  const origToCanvas = ds.toCanvasContext.bind(ds)
+  ds.toCanvasContext = function (ctx) {
+    ctx.scale(dpr, dpr)
+    origToCanvas(ctx)
+  }
 
   // Set the background to our dark theme colour, remove the default grid image
   graphCanvas.background_image = null
@@ -62,8 +84,10 @@ export async function initCanvas() {
 
   // Resize the canvas whenever the browser window is resized
   window.addEventListener('resize', () => {
-    canvasEl.width  = window.innerWidth
-    canvasEl.height = window.innerHeight - LOG_BAR_HEIGHT
+    canvasEl.width  = window.innerWidth  * dpr
+    canvasEl.height = (window.innerHeight - LOG_BAR_HEIGHT) * dpr
+    canvasEl.style.width  = window.innerWidth + 'px'
+    canvasEl.style.height = (window.innerHeight - LOG_BAR_HEIGHT) + 'px'
     graphCanvas.setDirty(true, true)
   })
 

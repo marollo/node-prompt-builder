@@ -262,6 +262,8 @@ Build and verify each step in the browser before moving to the next:
 33. ✅ Claude API browser fix — added `anthropic-dangerous-direct-browser-access: true` header to `claudeClient.js`; required for direct browser-to-Claude API calls to succeed (CORS block without it)
 31. ✅ Settings modal — "Settings" button fixed top-left opens a modal with Claude API Key input and Claude Model dropdown (Haiku / Sonnet / Opus); both values saved to `localStorage`; live pricing info line updates when model changes; `SettingsModal.js` + `claudePricing.js`
 32. ✅ Claude cost tracking — per-node cost bar drawn at the bottom of each content node canvas card showing `$0.0000 · N calls`; `claudeClient.js` returns `{ text, cost }` calculated from API usage tokens; `claudeNodeDraw.js` shared utility adds `computeSize` and `onDrawForeground` to all 5 content nodes; errors routed to log bar instead of filling the text field
+34. ✅ Image node (Media category) — `ImageNode.js`; Upload Image button opens file picker; image stored as base64; thumbnail drawn on canvas via `onDrawForeground`; node resizes via `computeSize`; one output slot; persists to IndexedDB via `onSerialize`/`onConfigure`; registered as `media/Image`; `media/` added to the node type filter in `canvas.js`
+35. ✅ HiDPI / Retina canvas sharpness — canvas buffer sized at `CSS size × devicePixelRatio` in `canvas.js`; CSS display size kept at logical pixels; `ds.toCanvasContext` patched to prepend `ctx.scale(dpr, dpr)` so drawing is at full physical resolution without affecting `ds.scale` (used for click coordinate math)
 
 ---
 

@@ -8,7 +8,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 - A dark LiteGraph canvas fills the full browser window
 - One node appears on the canvas at startup: **Prompt Assembler** — the user adds whichever model node they need from the search list
-- Nine node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model, Recraft V4 Pro — LiteGraph's built-in nodes are hidden
+- Ten node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model, Recraft V4 Pro, Image — LiteGraph's built-in nodes are hidden
 - Standard flow: content nodes → Prompt Assembler → NB2 Model (or Recraft V4 Pro) → API → image modal
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
 
@@ -45,6 +45,15 @@ This document is a plain English map of the codebase. It is updated after every 
 - If any upstream content node has a reference image uploaded, a yellow warning banner appears on the node: `⚠ Reference images ignored — text-to-image only`
 - Batch generation (Ad Format node) is not supported — Recraft V4 does not accept an aspect ratio override
 - Bottom of the node shows the same three live stats as NB2 Model: Spent / Est. / Req
+
+**Image node** *(Media category)*
+- Lets the user upload a single image from their computer and pass it to other nodes via its output slot
+- Has one "Upload Image" button widget — clicking it opens the system file picker (JPG, PNG, WebP)
+- Once an image is loaded, it is drawn as a thumbnail directly inside the node on the canvas
+- The node grows taller automatically to fit the thumbnail
+- One output slot outputs the image as a base64 string so downstream nodes can receive it
+- The uploaded image is saved to IndexedDB alongside everything else — it survives page reload
+- Appears under the **Media** section in the node search menu (double-click the canvas)
 
 **Canvas persistence**
 - The entire canvas state is saved to IndexedDB automatically every 2 seconds
@@ -105,6 +114,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   ├── CameraNode.js             ← Controls camera angle and lens — BUILT
 │   │   ├── LightingNode.js           ← Controls lighting setup — BUILT
 │   │   ├── StyleMoodNode.js          ← Controls visual style and mood — BUILT
+│   │   ├── ImageNode.js              ← Media category node — uploads an image, draws thumbnail on canvas, outputs base64 — BUILT
 │   │   └── ReferenceImageNode.js     ← Standalone reference image node — placeholder (not built)
 │   ├── panel/
 │   │   ├── PropertiesPanel.js        ← Side panel for editing node text fields and images — BUILT
@@ -248,7 +258,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **LGraphCanvas** — the renderer. Reads from LGraph and draws it on the HTML canvas. Handles mouse interaction.
 
-**Node registration** — every node file calls `LiteGraph.registerNodeType('category/Name', NodeClass)` at the end. Importing the file in `canvas.js` is enough to register it. The category prefix determines which section the node appears in when the user double-clicks the canvas: `prompt/` nodes (Prompt Assembler, Ad Format, and all content nodes) appear under **prompt**, and `model/` nodes (NB2 Model, Recraft V4 Pro) appear under **model**. All other LiteGraph built-in types are removed from the registry at startup so only these two sections are visible.
+**Node registration** — every node file calls `LiteGraph.registerNodeType('category/Name', NodeClass)` at the end. Importing the file in `canvas.js` is enough to register it. The category prefix determines which section the node appears in when the user double-clicks the canvas: `prompt/` nodes (Prompt Assembler, Ad Format, and all content nodes) appear under **prompt**, `model/` nodes (NB2 Model, Recraft V4 Pro) appear under **model**, and `media/` nodes (Image) appear under **media**. All other LiteGraph built-in types are removed from the registry at startup so only these three sections are visible.
 
 **getPromptFragment()** — a method every content node defines. Returns a lowercase string representing that node's contribution to the final prompt. If the node has reference images, the string opens with `"Using the provided [label], "`. The assembler capitalises the first letter and joins sections with `". "`. The assembler calls this without needing to know what type of node it's dealing with.
 
@@ -315,6 +325,8 @@ This document is a plain English map of the codebase. It is updated after every 
 **LogPanel.js** — creates a fixed 80px bar at the bottom of the screen. Any module can call `log(message, type)` to add a line. Type is `'success'` (green), `'error'` (red), or `'info'` (grey). The bar shows the last 5 messages, newest at the top, each prefixed with a timestamp. The bar element is created lazily — it is built into the DOM the first time `log()` is called. `apiClient.js` calls `log()` at every meaningful event: sending a request, successful generation (including image count and cost), API errors, CORS errors, and blocked generations.
 
 **Canvas height and the log bar** — the canvas is sized to `window.innerHeight - 80` (not the full window height) so the log bar never covers the bottom of the graph area. This adjustment is made in `canvas.js` both at startup and in the resize listener.
+
+**HiDPI / Retina canvas rendering** — on Retina screens (MacBooks and other HiDPI displays) the physical pixel density is 2× the CSS pixel size. Setting the canvas buffer to CSS size produces blurry nodes and text. The fix in `canvas.js`: the canvas `width` and `height` attributes are set to `CSS size × devicePixelRatio`, while `canvas.style.width/height` stays at CSS size — so the element fills the same screen area but is drawn at full physical resolution. LiteGraph's own zoom/pan transform (`ds.toCanvasContext`) is patched to prepend a `ctx.scale(dpr, dpr)` so every draw call is at the right physical resolution without affecting `ds.scale` (which LiteGraph also uses for click coordinate math — changing it would break mouse clicks).
 
 ---
 
