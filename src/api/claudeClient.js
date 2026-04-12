@@ -66,7 +66,9 @@ async function describeImage(imageDataUrl, systemPrompt) {
     headers: {
       'Content-Type':    'application/json',
       'x-api-key':       apiKey,
-      'anthropic-version': '2023-06-01'
+      'anthropic-version': '2023-06-01',
+      // Required when calling the Claude API directly from a browser — without this the request is blocked by CORS
+      'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
       model:      getClaudeModel(),

@@ -65,14 +65,13 @@ This document is a plain English map of the codebase. It is updated after every 
 - Both values are saved to `localStorage` immediately as the user types or selects — no Save button needed
 - The modal closes with ✕ or by clicking the dark backdrop behind it
 
-**Claude image-to-text ("Describe" button)**
-- Every image slot in the side panel has a "Describe" button next to the ✕ remove button
-- Clicking it sends that specific image to the Claude API together with a system prompt tailored to the node type (e.g. the Subject node asks for subject description only; the Lighting node asks for lighting description only)
-- While Claude is thinking the button shows "…" and is disabled; when the response arrives it fills the node's first text field automatically and updates the textarea live
-- The system prompts are stored as `.md` files in `src/prompts/` — one per content node — and are loaded at build time by Vite's `?raw` import. They are not visible to the end user
+**Claude image-to-text ("Describe" feature)**
+- The Describe feature sends a reference image to Claude and fills the node's text field with a description tailored to that node type (Subject node → subject description, Lighting node → lighting description, etc.)
+- The system prompts used are stored as `.md` files in `src/prompts/` — one per content node — and are loaded at build time by Vite's `?raw` import. They are not visible to the end user
 - The Claude API key and model are set in the Settings modal (top-left button) and stored in `localStorage`
 - If no Claude API key is set, the error is sent to the log bar and the text field is left untouched
-- After each successful Describe call, the exact cost (calculated from the token counts returned by the API) is accumulated on the node and drawn at the bottom of the node card on the canvas: `$0.0000 · N calls`
+- After each successful call, the exact cost (calculated from the token counts returned by the API) is accumulated on the node and drawn at the bottom of the node card on the canvas: `$0.0000 · N calls`
+- **Status:** The original "Describe" button on each image slot in the side panel has been removed. A new UX for triggering the Describe feature is being designed and will be added in a future step.
 
 **Shared behaviour**
 - The assembled prompt uses sentence structure: each node's contribution is a separate clause capitalised at the start, joined with `". "`

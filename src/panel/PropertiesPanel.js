@@ -9,7 +9,6 @@
 import { getSettings, getFormat } from '../api/ApiPanel.js'
 import { initCostUI } from '../api/CostControl.js'
 import { generate } from '../api/apiClient.js'
-import { describeImage } from '../api/claudeClient.js'
 
 // The panel DOM element — created once, reused on every open() call
 let panelEl = null
@@ -234,41 +233,7 @@ function renderSlots(node, slotsContainer, addBtn) {
       node.images[i].label = labelInput.value
     })
 
-    // Describe button — sends this image to Claude and fills the node's first text field
-    if (node.claudePrompt) {
-      const describeBtn = document.createElement('button')
-      describeBtn.className = 'image-describe-btn'
-      describeBtn.textContent = 'Describe'
-      describeBtn.addEventListener('click', async () => {
-        describeBtn.textContent = '…'
-        describeBtn.disabled = true
-
-        // Call Claude with this image and the node's system prompt
-        const result = await describeImage(img.data, node.claudePrompt)
-
-        // Only write to the node if Claude returned a valid result (null means an error was logged)
-        // result is { text, cost } on success, or null on error
-        if (result) {
-          // Accumulate cost and call count on the node so the canvas bar stays accurate
-          node.claudeSpent     = (node.claudeSpent     || 0) + result.cost
-          node.claudeCallCount = (node.claudeCallCount || 0) + 1
-
-          const firstKey = node.panelFields.find(f => !f.readonly)?.key
-          if (firstKey) {
-            node.values[firstKey] = result.text
-            // If the panel textarea is currently visible, update it live
-            const textarea = panelEl.querySelector(`textarea:not(.readonly)`)
-            if (textarea) textarea.value = result.text
-          }
-        }
-
-        describeBtn.textContent = 'Describe'
-        describeBtn.disabled = false
-      })
-      slot.appendChild(describeBtn)
-    }
-
-    // Remove button — splices this image out and redraws the list
+// Remove button — splices this image out and redraws the list
     const removeBtn = document.createElement('button')
     removeBtn.className = 'image-remove-btn'
     removeBtn.textContent = '✕'
