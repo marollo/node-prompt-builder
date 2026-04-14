@@ -7,7 +7,7 @@ import { LiteGraph } from 'litegraph.js'
 import { LIGHTING_STYLE, LIGHTING_TIME_OF_DAY } from '../utils/nodeOptions.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
 import lightingPrompt from '../prompts/lighting.md?raw'
-import { addClaudeStatsDrawing } from '../utils/claudeNodeDraw.js'
+
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -25,10 +25,6 @@ function LightingNode() {
 
   // System prompt sent to Claude when the user clicks "Describe" on an image slot
   this.claudePrompt = lightingPrompt
-
-  // Tracks total Claude API cost and call count for the stats bar drawn on the canvas
-  this.claudeSpent     = 0
-  this.claudeCallCount = 0
 
   // Label sent to the API to identify what role these images play
   this.referenceLabel = 'lighting reference'
@@ -108,10 +104,6 @@ LightingNode.prototype.onConfigure = function (info) {
   if (info.extra.values) this.values = info.extra.values
   if (info.extra.images) this.images = info.extra.images
 }
-
-// ─── Claude stats bar ─────────────────────────────────────────────────────────
-
-addClaudeStatsDrawing(LightingNode)
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 

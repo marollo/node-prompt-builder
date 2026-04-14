@@ -40,6 +40,10 @@ function ImageNode() {
   // The HTMLImageElement used for canvas drawing — rebuilt from imageData after upload or load
   this._imageEl = null
 
+  // The natural width/height ratio of the uploaded image — set once the image has decoded.
+  // Used by computeSize and onDrawForeground to keep the thumbnail proportional.
+  this._aspectRatio = null
+
   // Upload button — clicking it opens the system file picker
   this.addWidget('button', 'Upload Image', null, () => this._triggerUpload())
 }
@@ -87,6 +91,16 @@ ImageNode.prototype._triggerUpload = function () {
  */
 ImageNode.prototype._buildImageEl = function () {
   const img = new Image()
+
+  // Once the browser has decoded the image we can read its real pixel dimensions.
+  // We store the ratio and immediately resize the node so the thumbnail area
+  // is the correct height before the first draw.
+  img.onload = () => {
+    this._aspectRatio = img.naturalWidth / img.naturalHeight
+    this.size = this.computeSize()
+    this.setDirtyCanvas(true, true)
+  }
+
   img.src = this.imageData
   this._imageEl = img
 }
@@ -100,7 +114,14 @@ ImageNode.prototype._buildImageEl = function () {
  */
 ImageNode.prototype.computeSize = function () {
   const size = LiteGraph.LGraphNode.prototype.computeSize.call(this)
-  if (this.imageData) size[1] += 140
+  if (this.imageData && this._aspectRatio) {
+    // Calculate thumbnail height from the image's real aspect ratio so the node
+    // is exactly as tall as it needs to be — no wasted space, no cropping.
+    const margin = 8
+    const imgW = this.size[0] - margin * 2
+    const imgH = imgW / this._aspectRatio
+    size[1] += imgH + margin * 2
+  }
   return size
 }
 
@@ -124,16 +145,19 @@ ImageNode.prototype.onExecute = function () {
 ImageNode.prototype.onDrawForeground = function (ctx) {
   if (this.flags.collapsed) return
   if (!this._imageEl || !this._imageEl.complete) return
+  if (!this._aspectRatio) return
 
   const w      = this.size[0]
   const h      = this.size[1]
   const margin = 8
 
-  // Position the thumbnail in the bottom 140px of the node
+  // Fill the node width minus margins, then derive the height from the real ratio
   const imgX = margin
-  const imgY = h - 140 + margin
   const imgW = w - margin * 2
-  const imgH = 130
+  const imgH = imgW / this._aspectRatio
+
+  // Anchor the thumbnail to the bottom of the node with a small margin below it
+  const imgY = h - imgH - margin
 
   // Clip to a rounded rectangle so the thumbnail has soft corners
   ctx.save()

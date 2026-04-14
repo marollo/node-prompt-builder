@@ -7,7 +7,7 @@ import { LiteGraph } from 'litegraph.js'
 import { CAMERA_ANGLE, CAMERA_FOCAL_LENGTH } from '../utils/nodeOptions.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
 import cameraPrompt from '../prompts/camera.md?raw'
-import { addClaudeStatsDrawing } from '../utils/claudeNodeDraw.js'
+
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -25,10 +25,6 @@ function CameraNode() {
 
   // System prompt sent to Claude when the user clicks "Describe" on an image slot
   this.claudePrompt = cameraPrompt
-
-  // Tracks total Claude API cost and call count for the stats bar drawn on the canvas
-  this.claudeSpent     = 0
-  this.claudeCallCount = 0
 
   // Label sent to the API to identify what role these images play
   this.referenceLabel = 'camera reference'
@@ -107,10 +103,6 @@ CameraNode.prototype.onConfigure = function (info) {
   if (info.extra.values) this.values = info.extra.values
   if (info.extra.images) this.images = info.extra.images
 }
-
-// ─── Claude stats bar ─────────────────────────────────────────────────────────
-
-addClaudeStatsDrawing(CameraNode)
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 

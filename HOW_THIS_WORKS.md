@@ -8,7 +8,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 - A dark LiteGraph canvas fills the full browser window
 - One node appears on the canvas at startup: **Prompt Assembler** — the user adds whichever model node they need from the search list
-- Ten node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model, Recraft V4 Pro, Image — LiteGraph's built-in nodes are hidden
+- Eleven node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model, Recraft V4 Pro, Claude, Image — LiteGraph's built-in nodes are hidden
 - Standard flow: content nodes → Prompt Assembler → NB2 Model (or Recraft V4 Pro) → API → image modal
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
 
@@ -46,11 +46,20 @@ This document is a plain English map of the codebase. It is updated after every 
 - Batch generation (Ad Format node) is not supported — Recraft V4 does not accept an aspect ratio override
 - Bottom of the node shows the same three live stats as NB2 Model: Spent / Est. / Req
 
+**Claude node** *(Model category)*
+- Takes an image as input (from an Image node or any node with an image output) and returns a text description using the Claude API
+- A "Type" dropdown lets the user pick which description style to request: Subject, Location, Camera, Lighting, or Style/Mood — each maps to one of the existing `.md` system prompt files
+- A "Describe" button triggers the API call — the node reads the connected image and the selected prompt, calls Claude, and stores the returned text
+- The generated text is drawn word-wrapped inside a dark rounded box at the bottom of the node — always visible, with placeholder text until Describe is clicked
+- One output socket sends the generated text downstream — the Claude node implements `getPromptFragment()` so it can be wired directly into the Prompt Assembler like any content node
+- The generated text and status are persisted to IndexedDB via `onSerialize`/`onConfigure` so they survive page reload
+- Appears under the **Model** section in the node search menu
+
 **Image node** *(Media category)*
 - Lets the user upload a single image from their computer and pass it to other nodes via its output slot
 - Has one "Upload Image" button widget — clicking it opens the system file picker (JPG, PNG, WebP)
-- Once an image is loaded, it is drawn as a thumbnail directly inside the node on the canvas
-- The node grows taller automatically to fit the thumbnail
+- Once an image is loaded, it is drawn as a thumbnail directly inside the node on the canvas, filling the node width and preserving the image's original aspect ratio
+- The node grows taller automatically to the exact height needed for the proportional thumbnail — no fixed height, no cropping
 - One output slot outputs the image as a base64 string so downstream nodes can receive it
 - The uploaded image is saved to IndexedDB alongside everything else — it survives page reload
 - Appears under the **Media** section in the node search menu (double-click the canvas)
@@ -74,13 +83,12 @@ This document is a plain English map of the codebase. It is updated after every 
 - Both values are saved to `localStorage` immediately as the user types or selects — no Save button needed
 - The modal closes with ✕ or by clicking the dark backdrop behind it
 
-**Claude image-to-text ("Describe" feature)**
-- The Describe feature sends a reference image to Claude and fills the node's text field with a description tailored to that node type (Subject node → subject description, Lighting node → lighting description, etc.)
-- The system prompts used are stored as `.md` files in `src/prompts/` — one per content node — and are loaded at build time by Vite's `?raw` import. They are not visible to the end user
+**Claude image-to-text**
+- The Claude node (Model category) takes an image input and generates a text description using the Claude API
+- The user selects the description type from a dropdown (Subject, Location, Camera, Lighting, Style/Mood) — each maps to one of the five `.md` system prompt files in `src/prompts/`
+- Clicking the Describe button sends the image and selected prompt to Claude and stores the returned text on the node
+- The generated text is drawn directly on the node canvas in a word-wrapped text box, and also flows out of the output socket to any connected node including the Prompt Assembler
 - The Claude API key and model are set in the Settings modal (top-left button) and stored in `localStorage`
-- If no Claude API key is set, the error is sent to the log bar and the text field is left untouched
-- After each successful call, the exact cost (calculated from the token counts returned by the API) is accumulated on the node and drawn at the bottom of the node card on the canvas: `$0.0000 · N calls`
-- **Status:** The original "Describe" button on each image slot in the side panel has been removed. A new UX for triggering the Describe feature is being designed and will be added in a future step.
 
 **Shared behaviour**
 - The assembled prompt uses sentence structure: each node's contribution is a separate clause capitalised at the start, joined with `". "`
@@ -114,7 +122,8 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   ├── CameraNode.js             ← Controls camera angle and lens — BUILT
 │   │   ├── LightingNode.js           ← Controls lighting setup — BUILT
 │   │   ├── StyleMoodNode.js          ← Controls visual style and mood — BUILT
-│   │   ├── ImageNode.js              ← Media category node — uploads an image, draws thumbnail on canvas, outputs base64 — BUILT
+│   │   ├── ImageNode.js              ← Media category node — uploads an image, draws proportional thumbnail on canvas, outputs base64 — BUILT
+│   │   ├── ClaudeNode.js             ← Model category node — image-to-text via Claude API; dropdown selects description type; output wires into Prompt Assembler — BUILT
 │   │   └── ReferenceImageNode.js     ← Standalone reference image node — placeholder (not built)
 │   ├── panel/
 │   │   ├── PropertiesPanel.js        ← Side panel for editing node text fields and images — BUILT
@@ -302,7 +311,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **claudePricing.js** — the single pricing table for all three Claude models. Stores input and output prices per 1 million tokens. Exports `calculateClaudeCost(model, inputTokens, outputTokens)` which returns the exact dollar cost of one API call. Imported by both `SettingsModal.js` (for the live pricing display) and `claudeClient.js` (for post-call cost calculation). Prices are defined in one place so they never get out of sync.
 
-**claudeNodeDraw.js** — a utility that adds canvas drawing behaviour to any content node class. Called once per node class with `addClaudeStatsDrawing(NodeClass)`. Attaches two methods: `computeSize` (extends node height by 28px) and `onDrawForeground` (draws a separator line and cost stats at the bottom of the node). Before any Describe calls the bar shows `Claude: –`; after calls it shows `$0.0000 · N calls`. Using a shared utility avoids copy-pasting identical canvas code into all five content node files.
+**claudeNodeDraw.js** — a utility that was used to add a Claude cost stats bar to content nodes. The cost bar has since been removed from all content nodes — the file still exists but is no longer called by anything. It can be deleted in a future cleanup pass.
 
 **SettingsModal.js** — builds a full-screen modal overlay triggered by the Settings button. Contains a Claude API Key password input and a Claude Model dropdown. A live pricing line below the dropdown shows the input/output cost for the selected model and updates when the dropdown changes. Both values are saved to `localStorage` on every change — no explicit Save button. The modal is created once and toggled visible; the backdrop click and ✕ button both close it.
 

@@ -7,7 +7,7 @@ import { LiteGraph } from 'litegraph.js'
 import { SUBJECT_COUNT, SUBJECT_POSITION } from '../utils/nodeOptions.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
 import subjectPrompt from '../prompts/subject.md?raw'
-import { addClaudeStatsDrawing } from '../utils/claudeNodeDraw.js'
+
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -27,10 +27,6 @@ function SubjectNode() {
   // The system prompt sent to Claude when the user clicks "Describe" on an image slot.
   // Loaded from src/prompts/subject.md at build time — not editable by the end user.
   this.claudePrompt = subjectPrompt
-
-  // Tracks total Claude API cost and call count for the stats bar drawn on the canvas
-  this.claudeSpent     = 0
-  this.claudeCallCount = 0
 
   // Label sent to the API to identify what role these images play
   this.referenceLabel = 'subject reference'
@@ -116,11 +112,6 @@ SubjectNode.prototype.onConfigure = function (info) {
   if (info.extra.values) this.values = info.extra.values
   if (info.extra.images) this.images = info.extra.images
 }
-
-// ─── Claude stats bar ─────────────────────────────────────────────────────────
-
-// Adds computeSize and onDrawForeground to show cost at the bottom of the node
-addClaudeStatsDrawing(SubjectNode)
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
