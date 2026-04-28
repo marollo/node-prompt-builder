@@ -33,33 +33,68 @@ function openDB() {
 }
 
 /**
- * Saves the serialized graph object to IndexedDB.
- * Overwrites any previously saved state.
- * Called automatically every 2 seconds by canvas.js.
+ * Saves the serialized graph to IndexedDB as a JSON Blob.
+ * Storing a Blob (rather than a plain object) bypasses a Chrome bug where
+ * reading large structured values from IndexedDB fails with "UnknownError:
+ * Failed to read large IndexedDB value" when the data exceeds ~20MB.
+ * A Blob is written to disk via a separate file-backed path that has no
+ * such size limit, making it safe even with many base64 images in the graph.
+ * Passing null clears the saved state (used by "New Project").
  */
 export async function saveGraph(data) {
   const db = await openDB()
   return new Promise((resolve, reject) => {
-    const tx      = db.transaction(STORE_NAME, 'readwrite')
-    const store   = tx.objectStore(STORE_NAME)
-    const request = store.put(data, GRAPH_KEY)
+    const tx    = db.transaction(STORE_NAME, 'readwrite')
+    const store = tx.objectStore(STORE_NAME)
+
+    // Wrap the JSON string in a Blob so Chrome stores it via the file-backed path
+    const value   = data ? new Blob([JSON.stringify(data)], { type: 'application/json' }) : null
+    const request = store.put(value, GRAPH_KEY)
+
     request.onsuccess = () => resolve()
     request.onerror   = (e) => reject(e.target.error)
   })
 }
 
 /**
- * Loads the previously saved graph object from IndexedDB.
+ * Loads the previously saved graph from IndexedDB and returns it as a plain object.
  * Returns null if nothing has been saved yet (first run).
- * Called once at startup by canvas.js before creating any nodes.
+ * Handles both the new Blob format and the old plain-object format so existing
+ * saves are not lost after this change is deployed.
+ *
+ * If reading fails — e.g. Chrome's "Failed to read large IndexedDB value" bug
+ * that fires when a previously-saved plain-object value exceeds ~20MB — the
+ * corrupted save is deleted and null is returned so the app starts fresh rather
+ * than crashing with an uncaught error every time the page loads.
  */
 export async function loadGraph() {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const tx      = db.transaction(STORE_NAME, 'readonly')
-    const store   = tx.objectStore(STORE_NAME)
-    const request = store.get(GRAPH_KEY)
-    request.onsuccess = (e) => resolve(e.target.result || null)
-    request.onerror   = (e) => reject(e.target.error)
-  })
+  try {
+    const db = await openDB()
+    const value = await new Promise((resolve, reject) => {
+      const tx      = db.transaction(STORE_NAME, 'readonly')
+      const store   = tx.objectStore(STORE_NAME)
+      const request = store.get(GRAPH_KEY)
+      request.onsuccess = (e) => resolve(e.target.result ?? null)
+      request.onerror   = (e) => reject(e.target.error)
+      tx.onerror        = (e) => reject(e.target.error)
+    })
+
+    if (!value) return null
+
+    // New format — stored as a Blob: decode the JSON text inside it
+    if (value instanceof Blob) {
+      const text = await value.text()
+      return JSON.parse(text)
+    }
+
+    // Old format — stored as a plain object: return directly
+    return value
+
+  } catch (err) {
+    // Reading failed — most likely Chrome's large-value bug on an old plain-object save.
+    // Clear the unreadable value so the next page load does not crash again.
+    console.warn('[storageUtils] Failed to load graph — clearing save:', err.message)
+    try { await saveGraph(null) } catch (_) { /* ignore secondary failure */ }
+    return null
+  }
 }

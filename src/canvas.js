@@ -19,6 +19,7 @@ import './nodes/LightingNode.js'
 import './nodes/StyleMoodNode.js'
 import './nodes/ImageNode.js'
 import './nodes/ClaudeNode.js'
+import './nodes/CameraMoveNode.js'
 
 // Remove all built-in LiteGraph node types so only our custom nodes appear
 // in the search list when the user double-clicks the canvas.

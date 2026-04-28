@@ -8,7 +8,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 - A dark LiteGraph canvas fills the full browser window
 - One node appears on the canvas at startup: **Prompt Assembler** — the user adds whichever model node they need from the search list
-- Eleven node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model, Recraft V4 Pro, Claude, Image — LiteGraph's built-in nodes are hidden
+- Twelve node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model, Recraft V4 Pro, Claude, Camera Move, Image — LiteGraph's built-in nodes are hidden
 - Standard flow: content nodes → Prompt Assembler → NB2 Model (or Recraft V4 Pro) → API → image modal
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
 
@@ -46,6 +46,21 @@ This document is a plain English map of the codebase. It is updated after every 
 - Batch generation (Ad Format node) is not supported — Recraft V4 does not accept an aspect ratio override
 - Bottom of the node shows the same three live stats as NB2 Model: Spent / Est. / Req
 
+**Camera Move node** *(Model category)*
+- Takes an image as input and applies virtual camera movement using the `qwen/qwen-edit-multiangle` model on Replicate
+- Three interactive control rows are drawn directly on the node canvas, each with decrement and increment buttons:
+  - **Orbit** — rotates the camera left or right in 15° steps, range −90° to +90° (`rotate_degrees`)
+  - **Zoom** — pushes the camera closer in steps of 1, range 0 to 10 (`move_forward`)
+  - **Tilt** — three integer positions: −1 = bird's-eye (top-down), 0 = level, +1 = worm's-eye (low angle) (`vertical_tilt`)
+- Clicking a button updates the displayed value immediately — no generation happens until Generate is clicked
+- A **Settings** button opens the side panel with all optional Replicate parameters grouped into five sections: Camera (prompt text, wide angle toggle, aspect ratio), Generation (go fast toggle, inference steps, seed), LoRA (multiple angles toggle and strength, guidance scale, custom LoRA weights and scale), Output (format: webp/jpg/png, quality), and Safety (disable safety checker)
+- The **Generate** button sends the input image, all three camera values, and all settings panel values to Replicate and waits for the result (up to 60 seconds)
+- The **Download** button saves the generated image to the user's computer — the filename embeds the current camera values (e.g. `camera-move_orbit15_zoom2_tilt0.png`) for easy identification
+- The result image is drawn as a proportional thumbnail at the bottom of the node
+- One output socket passes the result as base64 so it can feed another Camera Move node (chaining moves) or any other node
+- The Replicate API key is entered directly on the node as a text widget
+- All camera values, settings, and generated results are persisted to IndexedDB via `onSerialize`/`onConfigure`
+
 **Claude node** *(Model category)*
 - Takes an image as input (from an Image node or any node with an image output) and returns a text description using the Claude API
 - A "Type" dropdown lets the user pick which description style to request: Subject, Location, Camera, Lighting, or Style/Mood — each maps to one of the existing `.md` system prompt files
@@ -68,6 +83,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - The entire canvas state is saved to IndexedDB automatically every 2 seconds
 - On page reload, the saved state is restored — all nodes, positions, connections, text, widget values, reference images, and selected ad formats come back exactly as they were
 - First run (nothing saved yet) shows the default canvas with only the Prompt Assembler node
+- The graph is stored as a JSON **Blob** (not a plain object) to avoid a Chrome bug where reading large structured values from IndexedDB fails with "Failed to read large IndexedDB value" — Blobs use a different file-backed storage path that has no size limit
 
 **New Project button**
 - A small "New Project" button sits fixed in the top-right corner of the canvas
@@ -108,6 +124,7 @@ This document is a plain English map of the codebase. It is updated after every 
 /
 ├── index.html                        ← The one HTML page the browser loads
 ├── package.json                      ← Lists tools the project depends on (Vite, LiteGraph)
+├── vite.config.js                    ← Vite dev server config — proxies /api/replicate → https://api.replicate.com/v1 to bypass CORS
 ├── src/
 │   ├── main.js                       ← Entry point — boots the canvas when the page loads
 │   ├── canvas.js                     ← Sets up LiteGraph, registers nodes, starts render loop
@@ -124,6 +141,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   ├── StyleMoodNode.js          ← Controls visual style and mood — BUILT
 │   │   ├── ImageNode.js              ← Media category node — uploads an image, draws proportional thumbnail on canvas, outputs base64 — BUILT
 │   │   ├── ClaudeNode.js             ← Model category node — image-to-text via Claude API; dropdown selects description type; output wires into Prompt Assembler — BUILT
+│   │   ├── CameraMoveNode.js         ← Model category node — applies virtual camera orbit/zoom/tilt to an image via Replicate qwen-edit-multiangle; canvas controls + thumbnail — BUILT
 │   │   └── ReferenceImageNode.js     ← Standalone reference image node — placeholder (not built)
 │   ├── panel/
 │   │   ├── PropertiesPanel.js        ← Side panel for editing node text fields and images — BUILT
@@ -145,6 +163,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   └── formats/
 │   │       ├── falai.js              ← Nano Banana 2 formatter — auto-routes t2i vs edit, cost calc — BUILT
 │   │       ├── recraftV4.js          ← Recraft V4 Pro formatter — text-to-image only, flat $0.25/image — BUILT
+│   │       ├── replicate.js          ← Replicate REST formatter — buildRequest, parseResponse, fetchImageAsBase64 — BUILT
 │   │       ├── automatic1111.js      ← Automatic1111 request format — placeholder
 │   │       └── comfyui.js            ← ComfyUI request format — placeholder
 │   ├── prompts/
@@ -297,9 +316,15 @@ This document is a plain English map of the codebase. It is updated after every 
 - `_isAspectRatioOverridden()` — returns true when an Ad Format node is connected to the Prompt input and has at least one format selected. Sets `this._aspectRatio.disabled` accordingly on every tick.
 - `_getFormatCount()` — returns `selectedFormats.length` from the upstream Ad Format node, or 1 if no Ad Format node is connected or no formats are selected. Used to multiply the cost estimate.
 
+**replicate.js** — the Replicate API request formatter. `buildRequest(modelPath, inputParams, apiKey)` builds a POST to `https://api.replicate.com/v1/models/{owner}/{name}/predictions` with a `Prefer: wait=60` header that makes the call block until the model finishes (up to 60 seconds). `parseResponse(data)` extracts the first output URL. `fetchImageAsBase64(url)` fetches the returned image URL and converts it to a base64 data URL so it can be stored in IndexedDB and passed through the graph like any other image.
+
+**CameraMoveNode canvas controls** — unlike content nodes whose values are edited via LiteGraph widgets or the side panel, the Camera Move node draws its three control rows directly on the canvas using `onDrawForeground` and detects clicks via `onMouseDown`. Each row has a left and right button area. When `onMouseDown` fires, it checks which row and which side was clicked, adjusts the stored value by one step, and calls `setDirtyCanvas()` to redraw immediately. LiteGraph calls `onMouseDown` only after ruling out widget clicks, so the Generate button and API Key widget work normally alongside the custom controls.
+
+**Vite dev server proxy** — the Replicate API does not send CORS headers, so the browser blocks any direct call from `localhost`. The fix is in `vite.config.js`: any request the app makes to `/api/replicate/...` is caught by the Vite dev server and forwarded to `https://api.replicate.com/v1/...` server-side, stripping the `/api/replicate` prefix. The browser only ever talks to its own origin — no cross-origin request, no CORS block. `REPLICATE_API_BASE` in `replicate.js` is set to `/api/replicate` so all Replicate calls go through the proxy automatically. This proxy only works during local development — a production deployment would need a server-side route or a backend to do the same job.
+
 **storageUtils.js** — a Promise-based wrapper around the browser's IndexedDB API. Exports `saveGraph(data)` and `loadGraph()`. Internally opens (or creates) a database called `node-prompt-builder` with a single object store called `graph`. The entire serialized graph is stored under the key `canvas`. Every call to `openDB()` returns a fresh connection — no persistent connection is kept.
 
-**IndexedDB persistence** — unlike `localStorage`, IndexedDB has no practical size limit and handles large JSON objects (including base64 reference images) without issues. The graph is saved as the plain object returned by `graph.serialize()`, which LiteGraph can restore in full with `graph.configure()`.
+**IndexedDB persistence** — unlike `localStorage`, IndexedDB has no practical size limit and handles large JSON objects (including base64 reference images) without issues. The graph is serialised with `graph.serialize()` and stored as a `Blob` (not a plain JS object) to avoid a Chrome bug where reading large structured values from IndexedDB fails above ~20MB. The Blob is restored with `blob.text()` and `JSON.parse()` on load. Existing saves stored as plain objects are still loaded correctly via a format check (`instanceof Blob`).
 
 **`onSerialize` / `onConfigure`** — two LiteGraph hooks that every content node implements. `onSerialize(info)` adds our custom data (`this.values`, `this.images`, `this.selectedFormats`) to the object LiteGraph is about to save. `onConfigure(info)` reads it back when restoring. Without these hooks, custom data would be lost on reload because LiteGraph only saves widget values and positions by default.
 

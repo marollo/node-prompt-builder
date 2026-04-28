@@ -55,8 +55,8 @@ export function open(node) {
   title.textContent = node.title
   content.appendChild(title)
 
-  // One labeled textarea per field declared on the node
-  for (const field of node.panelFields) {
+  // One labeled textarea per field declared on the node (content nodes only)
+  for (const field of (node.panelFields || [])) {
     const label = document.createElement('label')
     label.textContent = field.label
 
@@ -80,6 +80,11 @@ export function open(node) {
   // Add the image upload section only for nodes that support reference images
   if (node.images !== undefined) {
     buildImageSection(node, content)
+  }
+
+  // Camera Move node gets its own settings section
+  if (node.title === 'Camera Move') {
+    buildCameraMoveSection(node, content)
   }
 
   // Model nodes get the cost settings section (budget and cooldown)
@@ -201,6 +206,181 @@ function buildImageSection(node, content) {
   renderSlots(node, slotsContainer, addBtn)
 
   content.appendChild(section)
+}
+
+/**
+ * Builds the full settings panel for the Camera Move node.
+ * Shows every optional API parameter grouped into labelled sections.
+ * Each input is wired directly to the node property so changes take effect
+ * immediately — no Save button needed.
+ */
+function buildCameraMoveSection(node, content) {
+  // Creates a section title divider
+  function sectionTitle(text) {
+    const div = document.createElement('div')
+    div.className = 'panel-section-title'
+    div.textContent = text
+    content.appendChild(div)
+  }
+
+  // Creates a label that wraps an input element and appends it to content
+  function row(labelText, inputEl, hint) {
+    const label = document.createElement('label')
+    label.className = 'panel-field-label'
+    label.appendChild(document.createTextNode(labelText))
+    if (hint) {
+      const s = document.createElement('span')
+      s.className = 'panel-optional'
+      s.textContent = ' ' + hint
+      label.appendChild(s)
+    }
+    label.appendChild(inputEl)
+    content.appendChild(label)
+  }
+
+  // ── Camera ──────────────────────────────────────────────────────────────────
+  sectionTitle('Camera')
+
+  const promptEl = document.createElement('textarea')
+  promptEl.className = 'panel-input'
+  promptEl.rows = 3
+  promptEl.placeholder = 'Optional text appended after the camera directive…'
+  promptEl.value = node._prompt
+  promptEl.addEventListener('input', () => { node._prompt = promptEl.value })
+  row('Prompt', promptEl, '(optional)')
+
+  const wideAngleEl = document.createElement('input')
+  wideAngleEl.type = 'checkbox'
+  wideAngleEl.checked = node._useWideAngle
+  wideAngleEl.addEventListener('change', () => { node._useWideAngle = wideAngleEl.checked })
+  row('Wide Angle', wideAngleEl)
+
+  const aspectEl = document.createElement('select')
+  aspectEl.className = 'panel-input'
+  for (const opt of ['match_input_image', '1:1', '16:9', '4:3', '3:2', '9:16']) {
+    const o = document.createElement('option')
+    o.value = o.textContent = opt
+    if (opt === node._aspectRatio) o.selected = true
+    aspectEl.appendChild(o)
+  }
+  aspectEl.addEventListener('change', () => { node._aspectRatio = aspectEl.value })
+  row('Aspect Ratio', aspectEl)
+
+  // ── Generation ──────────────────────────────────────────────────────────────
+  sectionTitle('Generation')
+
+  const goFastEl = document.createElement('input')
+  goFastEl.type = 'checkbox'
+  goFastEl.checked = node._goFast
+  goFastEl.addEventListener('change', () => { node._goFast = goFastEl.checked })
+  row('Go Fast', goFastEl, '(on = 4-step Lightning, off = 40-step detailed)')
+
+  const stepsEl = document.createElement('input')
+  stepsEl.type = 'number'
+  stepsEl.className = 'panel-input'
+  stepsEl.min = 1
+  stepsEl.max = 40
+  stepsEl.placeholder = 'Leave blank to use Go Fast preset'
+  stepsEl.value = node._numInferenceSteps ?? ''
+  stepsEl.addEventListener('input', () => {
+    node._numInferenceSteps = stepsEl.value !== '' ? parseInt(stepsEl.value) : null
+  })
+  row('Inference Steps', stepsEl, '(1–40, optional)')
+
+  const seedEl = document.createElement('input')
+  seedEl.type = 'number'
+  seedEl.className = 'panel-input'
+  seedEl.placeholder = 'Leave blank for random'
+  seedEl.value = node._seed ?? ''
+  seedEl.addEventListener('input', () => {
+    node._seed = seedEl.value !== '' ? parseInt(seedEl.value) : null
+  })
+  row('Seed', seedEl, '(optional)')
+
+  // ── LoRA ────────────────────────────────────────────────────────────────────
+  sectionTitle('LoRA')
+
+  const multipleAnglesEl = document.createElement('input')
+  multipleAnglesEl.type = 'checkbox'
+  multipleAnglesEl.checked = node._useMultipleAngles
+  multipleAnglesEl.addEventListener('change', () => { node._useMultipleAngles = multipleAnglesEl.checked })
+  row('Use Multiple Angles', multipleAnglesEl, '(default on)')
+
+  const strengthEl = document.createElement('input')
+  strengthEl.type = 'number'
+  strengthEl.className = 'panel-input'
+  strengthEl.min = 0
+  strengthEl.max = 2
+  strengthEl.step = 0.05
+  strengthEl.value = node._multipleAnglesStrength
+  strengthEl.addEventListener('input', () => {
+    node._multipleAnglesStrength = parseFloat(strengthEl.value) || 1
+  })
+  row('Multiple Angles Strength', strengthEl, '(0–2)')
+
+  const guidanceEl = document.createElement('input')
+  guidanceEl.type = 'number'
+  guidanceEl.className = 'panel-input'
+  guidanceEl.step = 0.1
+  guidanceEl.placeholder = 'Leave blank for default'
+  guidanceEl.value = node._trueGuidanceScale ?? ''
+  guidanceEl.addEventListener('input', () => {
+    node._trueGuidanceScale = guidanceEl.value !== '' ? parseFloat(guidanceEl.value) : null
+  })
+  row('True Guidance Scale', guidanceEl, '(optional)')
+
+  const loraWeightsEl = document.createElement('input')
+  loraWeightsEl.type = 'text'
+  loraWeightsEl.className = 'panel-input'
+  loraWeightsEl.placeholder = 'HuggingFace slug or .safetensors URL'
+  loraWeightsEl.value = node._loraWeights
+  loraWeightsEl.addEventListener('input', () => { node._loraWeights = loraWeightsEl.value })
+  row('LoRA Weights', loraWeightsEl, '(optional)')
+
+  const loraScaleEl = document.createElement('input')
+  loraScaleEl.type = 'number'
+  loraScaleEl.className = 'panel-input'
+  loraScaleEl.step = 0.05
+  loraScaleEl.placeholder = 'Leave blank for default'
+  loraScaleEl.value = node._loraScale ?? ''
+  loraScaleEl.addEventListener('input', () => {
+    node._loraScale = loraScaleEl.value !== '' ? parseFloat(loraScaleEl.value) : null
+  })
+  row('LoRA Scale', loraScaleEl, '(optional)')
+
+  // ── Output ──────────────────────────────────────────────────────────────────
+  sectionTitle('Output')
+
+  const formatEl = document.createElement('select')
+  formatEl.className = 'panel-input'
+  for (const opt of ['webp', 'jpg', 'png']) {
+    const o = document.createElement('option')
+    o.value = o.textContent = opt
+    if (opt === node._outputFormat) o.selected = true
+    formatEl.appendChild(o)
+  }
+  formatEl.addEventListener('change', () => { node._outputFormat = formatEl.value })
+  row('Output Format', formatEl)
+
+  const qualityEl = document.createElement('input')
+  qualityEl.type = 'number'
+  qualityEl.className = 'panel-input'
+  qualityEl.min = 0
+  qualityEl.max = 100
+  qualityEl.value = node._outputQuality
+  qualityEl.addEventListener('input', () => {
+    node._outputQuality = parseInt(qualityEl.value) || 95
+  })
+  row('Output Quality', qualityEl, '(0–100, ignored for PNG)')
+
+  // ── Safety ──────────────────────────────────────────────────────────────────
+  sectionTitle('Safety')
+
+  const safetyEl = document.createElement('input')
+  safetyEl.type = 'checkbox'
+  safetyEl.checked = node._disableSafetyChecker
+  safetyEl.addEventListener('change', () => { node._disableSafetyChecker = safetyEl.checked })
+  row('Disable Safety Checker', safetyEl, '(default off)')
 }
 
 /**
