@@ -63,7 +63,20 @@ ClaudeNode.title = 'Claude'
  * Called when the user clicks the Describe button.
  */
 ClaudeNode.prototype._describe = async function () {
-  const imageData = this.getInputData(0)
+  // getInputData reads link.data, which is only set after the upstream node's
+  // onExecute runs. As a fallback, walk the link directly to the source node
+  // and read its image property — this always reflects the current state.
+  let imageData = this.getInputData(0)
+
+  if (!imageData && this.inputs[0] && this.inputs[0].link != null) {
+    const link = this.graph.links[this.inputs[0].link]
+    if (link) {
+      const src = this.graph.getNodeById(link.origin_id)
+      if (src) {
+        imageData = src.imageData || src._outputImageData || null
+      }
+    }
+  }
 
   if (!imageData) {
     log('Claude node: connect an Image node to the input first.', 'error')

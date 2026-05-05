@@ -220,6 +220,135 @@ html, body {
   color: #60a5fa;
 }
 
+/* ─── Gallery button ─────────────────────────────────────────────────────────
+   Sits to the right of the Settings button in the top-left corner.
+   ─────────────────────────────────────────────────────────────────────────── */
+#gallery-btn {
+  position: fixed;
+  top: 12px;
+  left: 100px;
+  z-index: 150;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #888;
+  font-size: 12px;
+  font-family: sans-serif;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+#gallery-btn:hover {
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+/* ─── Gallery modal ──────────────────────────────────────────────────────────
+   Full-screen dark overlay. The inner box holds the header and scrollable grid.
+   ─────────────────────────────────────────────────────────────────────────── */
+#gallery-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+}
+
+#gallery-modal-box {
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  width: 90vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#gallery-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+
+#gallery-modal-title {
+  font-size: 13px;
+  font-family: sans-serif;
+  color: #e0e0e0;
+  font-weight: 600;
+}
+
+#gallery-modal-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+#gallery-modal-close:hover { color: #e0e0e0; }
+
+#gallery-modal-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+  align-content: flex-start;
+}
+
+.gallery-card {
+  width: 160px;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.gallery-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  cursor: pointer;
+  display: block;
+}
+
+.gallery-thumb:hover { opacity: 0.85; }
+
+.gallery-meta {
+  padding: 6px 8px 2px;
+  font-size: 11px;
+  font-family: sans-serif;
+  color: #aaa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gallery-date {
+  padding: 0 8px 6px;
+  font-size: 10px;
+  font-family: monospace;
+  color: #555;
+}
+
+.gallery-empty {
+  width: 100%;
+  text-align: center;
+  padding: 40px 0;
+  font-size: 13px;
+  font-family: sans-serif;
+  color: #555;
+}
+
 /* ─── Settings modal ─────────────────────────────────────────────────────────
    Full-screen dark overlay — clicking it closes the modal.
    The white box in the center holds the settings fields.
@@ -370,6 +499,32 @@ html, body {
   color: #555;
   font-size: 11px;
 }
+
+/* Seed field row — number input and Random button side by side */
+.seed-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.seed-input-row .panel-input {
+  flex: 1;
+  width: auto;
+}
+
+.seed-random-btn {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #aaa;
+  font-size: 11px;
+  padding: 5px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.seed-random-btn:hover { border-color: #888; color: #e0e0e0; }
 
 /* ─── Output node side panel — Cost & Generate section ───────────────────────
    Budget, cooldown, stats, and the Generate button.

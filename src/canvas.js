@@ -6,6 +6,7 @@
 import { LGraph, LGraphCanvas, LiteGraph } from 'litegraph.js'
 import { saveGraph, loadGraph } from './utils/storageUtils.js'
 import { openSettings } from './panel/SettingsModal.js'
+import { openGallery } from './panel/GalleryModal.js'
 
 // Import node types — each import registers them with LiteGraph automatically
 import './nodes/PromptAssemblerNode.js'
@@ -127,6 +128,9 @@ export async function initCanvas() {
   // Add the "Settings" button to the top-left corner of the screen
   _addSettingsButton()
 
+  // Add the "Gallery" button next to Settings
+  _addGalleryButton()
+
   // Start the graph — begins the render loop
   graph.start()
 
@@ -143,6 +147,18 @@ function _addSettingsButton() {
   btn.textContent = 'Settings'
   document.body.appendChild(btn)
   btn.addEventListener('click', openSettings)
+}
+
+/**
+ * Creates and injects the "Gallery" button next to the Settings button.
+ * Clicking it opens the gallery modal showing all images saved to IndexedDB.
+ */
+function _addGalleryButton() {
+  const btn = document.createElement('button')
+  btn.id = 'gallery-btn'
+  btn.textContent = 'Gallery'
+  document.body.appendChild(btn)
+  btn.addEventListener('click', openGallery)
 }
 
 /**

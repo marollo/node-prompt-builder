@@ -11,6 +11,7 @@ import { LiteGraph } from 'litegraph.js'
 import { log } from '../panel/LogPanel.js'
 import { buildRequest, parseResponse, fetchImageAsBase64 } from '../api/formats/replicate.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
+import { saveToGallery } from '../utils/galleryStore.js'
 
 // Replicate model path — the owner/name slug from the model's URL
 const MODEL_PATH = 'qwen/qwen-edit-multiangle'
@@ -327,6 +328,7 @@ CameraMoveNode.prototype._generate = async function () {
     // Replicate returns an https:// URL — convert to base64 for local storage
     const base64 = await fetchImageAsBase64(imgUrl)
     this._outputImageData = base64
+    saveToGallery(base64, 'Camera Move')
 
     // Build the thumbnail element — aspect ratio is set in onload
     const img  = new Image()

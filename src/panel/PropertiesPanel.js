@@ -287,6 +287,10 @@ function buildCameraMoveSection(node, content) {
   })
   row('Inference Steps', stepsEl, '(1–40, optional)')
 
+  // Seed input and a Random button sit side-by-side inside a flex wrapper
+  const seedWrapper = document.createElement('div')
+  seedWrapper.className = 'seed-input-row'
+
   const seedEl = document.createElement('input')
   seedEl.type = 'number'
   seedEl.className = 'panel-input'
@@ -295,7 +299,20 @@ function buildCameraMoveSection(node, content) {
   seedEl.addEventListener('input', () => {
     node._seed = seedEl.value !== '' ? parseInt(seedEl.value) : null
   })
-  row('Seed', seedEl, '(optional)')
+
+  // Clicking Random fills the field with a new 32-bit integer and stores it on the node
+  const seedRandomBtn = document.createElement('button')
+  seedRandomBtn.textContent = 'Random'
+  seedRandomBtn.className = 'seed-random-btn'
+  seedRandomBtn.addEventListener('click', () => {
+    const s = Math.floor(Math.random() * 2147483647)
+    seedEl.value = s
+    node._seed = s
+  })
+
+  seedWrapper.appendChild(seedEl)
+  seedWrapper.appendChild(seedRandomBtn)
+  row('Seed', seedWrapper, '(optional)')
 
   // ── LoRA ────────────────────────────────────────────────────────────────────
   sectionTitle('LoRA')

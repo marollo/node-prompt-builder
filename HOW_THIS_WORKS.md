@@ -27,6 +27,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - Bottom of the node shows three live stats drawn directly on the canvas: Spent / Est. / Req
 - The Est. figure multiplies the base cost by the number of selected formats when an Ad Format node is connected — so the user sees the total expected spend for the whole batch before clicking Generate
 - All generation state (API key, params, format) is pushed into `apiClient.js` on every tick
+- After each successful generation, all returned images are fetched as base64, stored on the node as `_lastImages`, and saved to the dedicated `gallery-db` IndexedDB gallery store — the images persist across page reloads even if the node is later deleted
 
 **Ad Format node** *(optional — insert between Prompt Assembler and NB2 Model for batch generation)*
 - Has one input slot (Prompt) and one output slot (Prompt) — passes the prompt straight through
@@ -45,6 +46,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - If any upstream content node has a reference image uploaded, a yellow warning banner appears on the node: `⚠ Reference images ignored — text-to-image only`
 - Batch generation (Ad Format node) is not supported — Recraft V4 does not accept an aspect ratio override
 - Bottom of the node shows the same three live stats as NB2 Model: Spent / Est. / Req
+- After each successful generation the returned image is fetched as base64, stored on the node as `_lastImages`, and saved to the `gallery-db` gallery store — same persistence behaviour as the NB2 Model node
 
 **Camera Move node** *(Model category)*
 - Takes an image as input and applies virtual camera movement using the `qwen/qwen-edit-multiangle` model on Replicate
@@ -60,6 +62,8 @@ This document is a plain English map of the codebase. It is updated after every 
 - One output socket passes the result as base64 so it can feed another Camera Move node (chaining moves) or any other node
 - The Replicate API key is entered directly on the node as a text widget
 - All camera values, settings, and generated results are persisted to IndexedDB via `onSerialize`/`onConfigure`
+- The generated image is also saved to the `gallery-db` gallery store immediately after it is converted to base64 — so it appears in the Gallery even if this node is later removed from the canvas
+- The **seed** field in Settings has a **Random** button next to it — clicking it fills the field with a new random integer so the user can lock the result for reproducibility without having to invent a number
 
 **Claude node** *(Model category)*
 - Takes an image as input (from an Image node or any node with an image output) and returns a text description using the Claude API
@@ -90,6 +94,13 @@ This document is a plain English map of the codebase. It is updated after every 
 - Clicking it shows a confirmation dialog — if confirmed, all nodes are cleared from the canvas and IndexedDB is wiped (`saveGraph(null)`)
 - The default Prompt Assembler node is immediately recreated so the canvas is never left empty
 - When the side panel is open, the button shifts left automatically so it is never hidden behind the panel
+
+**Gallery button and modal**
+- A "Gallery" button sits fixed in the top-left corner, immediately to the right of the Settings button
+- Clicking it opens a full-screen gallery overlay that reads all saved images directly from the `gallery-db` IndexedDB database — completely independent of which nodes are currently on the canvas
+- Images are shown newest-first in a flex-wrap grid of cards; each card shows a thumbnail, the node that generated it (e.g. "NB2 Model"), and a formatted timestamp
+- Clicking a thumbnail opens the full-size image in a new browser tab
+- An empty-state message is shown if no images have been saved to the gallery store yet
 
 **Settings button and modal**
 - A small "Settings" button sits fixed in the top-left corner of the canvas
@@ -146,6 +157,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   ├── panel/
 │   │   ├── PropertiesPanel.js        ← Side panel for editing node text fields and images — BUILT
 │   │   ├── SettingsModal.js          ← Modal for Claude API key and model selection — BUILT
+│   │   ├── GalleryModal.js           ← Full-screen gallery overlay reading all images from gallery-db IndexedDB — BUILT
 │   │   ├── AdFormatPanel.js          ← Checkbox panel for selecting ad formats grouped by platform — BUILT
 │   │   ├── ImageModal.js             ← Full-screen overlay showing generated images with optional labels — BUILT
 │   │   ├── LogPanel.js               ← Fixed bottom bar showing API responses and errors — BUILT
@@ -176,8 +188,9 @@ This document is a plain English map of the codebase. It is updated after every 
 │       ├── nodeOptions.js            ← All dropdown data for all nodes — BUILT
 │       ├── claudePricing.js          ← Pricing table for all Claude models — single source of truth — BUILT
 │       ├── claudeNodeDraw.js         ← Shared canvas drawing utility for Claude stats bar on content nodes — BUILT
-│       ├── imageUtils.js             ← Image helpers — placeholder
-│       └── storageUtils.js           ← IndexedDB save/load wrapper — BUILT
+│       ├── imageUtils.js             ← fetchAsBase64(url) — converts a CDN image URL to a base64 data string — BUILT
+│       ├── galleryStore.js           ← Dedicated gallery-db IndexedDB store — saveToGallery / loadAllFromGallery — BUILT
+│       └── storageUtils.js           ← IndexedDB save/load wrapper for the graph — BUILT
 ├── public/                           ← Static assets (empty for now)
 └── docs/                             ← Plain English documentation per subsystem
 ```
@@ -348,7 +361,11 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **ImageModal.js** — a full-screen overlay shown after every successful generation. Accepts an array of `{url, label}` objects. In single mode `label` is `null` and nothing extra is shown. In batch mode `label` is `"Format Name · W×H"` and appears between the thumbnail and the "Open full size" link.
 
-**apiClient.js module state** — `_apiKey`, `_format`, `_currentPrompt`, `_generationParams`, `_referenceImages`, and `_selectedFormats` are all stored as module-level variables. `generate()` branches on `_selectedFormats.length`: zero means single generation (`_generateSingle`), non-zero means batch (`_generateBatch`).
+**apiClient.js module state** — `_apiKey`, `_format`, `_currentPrompt`, `_generationParams`, `_referenceImages`, and `_selectedFormats` are all stored as module-level variables. `generate()` branches on `_selectedFormats.length`: zero means single generation (`_generateSingle`), non-zero means batch (`_generateBatch`). A `_resultCallback` variable holds an optional one-shot function registered by model nodes via `setResultCallback(fn)` — after a successful generation the callback receives the array of image URLs, then is cleared so it does not fire again.
+
+**galleryStore.js** — a completely separate IndexedDB database (`gallery-db`) dedicated to storing generated images. Each entry holds the base64 image string, a label identifying the source node (e.g. `'NB2 Model'`, `'Camera Move'`), and a Unix timestamp. `saveToGallery(src, label)` adds one entry. `loadAllFromGallery()` returns all entries sorted newest-first. This store is independent of the graph store — images survive page reload even if the node that generated them is later deleted from the canvas.
+
+**imageUtils.js** — `fetchAsBase64(url)` downloads an `https://` image URL and returns it as a base64 data URL. Used by the NB2 Model and Recraft V4 Pro nodes to convert the temporary CDN URLs returned by fal.ai into storable base64 strings immediately after generation.
 
 **AdFormatNode.js** — optional pass-through node. Receives the prompt, passes it downstream unchanged, and pushes its `selectedFormats` array to `apiClient` via `setSelectedFormats()` on every tick. Uses `onRemoved()` to clear the format list when deleted from the canvas.
 

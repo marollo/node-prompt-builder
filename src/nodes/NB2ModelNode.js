@@ -6,7 +6,7 @@
 
 import { LiteGraph } from 'litegraph.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
-import { setGenerationParams, setApiKey, setFormat, generate } from '../api/apiClient.js'
+import { setGenerationParams, setApiKey, setFormat, setResultCallback, generate } from '../api/apiClient.js'
 import { getStats, updateEstimate } from '../api/CostControl.js'
 import { calculateCost } from '../api/formats/falai.js'
 import {
@@ -16,6 +16,8 @@ import {
   FALAI_SAFETY,
   FALAI_RESOLUTION,
 } from '../utils/nodeOptions.js'
+import { fetchAsBase64 } from '../utils/imageUtils.js'
+import { saveToGallery } from '../utils/galleryStore.js'
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -43,8 +45,21 @@ function NB2ModelNode() {
   // API key entered directly on the canvas — visible to the user
   this._apiKey = this.addWidget('text', 'API Key', '', null, {})
 
-  // Generate button — triggers image generation
-  this.addWidget('button', 'Generate', null, () => generate())
+  // Stores the last batch of generated images as base64 strings for IndexedDB persistence
+  this._lastImages = []
+
+  // Generate button — registers a result callback then triggers generation
+  this.addWidget('button', 'Generate', null, () => {
+    setResultCallback(async (urls) => {
+      try {
+        this._lastImages = await Promise.all(urls.map(u => fetchAsBase64(u)))
+        for (const src of this._lastImages) saveToGallery(src, 'NB2 Model')
+      } catch (e) {
+        // fetch failed — images stay visible in modal but won't persist
+      }
+    })
+    generate()
+  })
 
   // Cost Settings button — opens the side panel with budget and cooldown controls
   this.addWidget('button', 'Cost Settings', null, () => openPanel(this))
@@ -178,6 +193,24 @@ NB2ModelNode.prototype.onDrawForeground = function (ctx) {
 
   // Reset alignment so other drawing code is not affected
   ctx.textAlign = 'left'
+}
+
+// ─── Serialization ────────────────────────────────────────────────────────────
+
+/**
+ * Called by LiteGraph when saving the graph.
+ * Persists the last batch of generated images as base64 strings.
+ */
+NB2ModelNode.prototype.onSerialize = function (info) {
+  info.extra = { lastImages: this._lastImages }
+}
+
+/**
+ * Called by LiteGraph when loading a saved graph.
+ * Restores the last generated images so they survive a page reload.
+ */
+NB2ModelNode.prototype.onConfigure = function (info) {
+  if (info.extra) this._lastImages = info.extra.lastImages || []
 }
 
 // ─── Register ─────────────────────────────────────────────────────────────────

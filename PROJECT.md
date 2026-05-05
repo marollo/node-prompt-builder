@@ -273,6 +273,10 @@ Build and verify each step in the browser before moving to the next:
 42. ✅ Camera Move parameter fixes — `rotate_degrees` capped at ±90 (not ±180); `move_forward` range corrected to 0–10 (not −10 to 10); `vertical_tilt` step corrected to integer 1 with range −1 to 1; `Math.round()` applied to all three values in `_generate()` and `onConfigure` to prevent float type errors
 43. ✅ Camera Move Download button — `_download()` method added to `CameraMoveNode.js`; creates a temporary `<a download>` element with the base64 image; filename encodes current camera values; logs an error if no image has been generated yet
 44. ✅ Camera Move settings side panel — Settings button opens `PropertiesPanel` with all 14 optional Replicate parameters (prompt, wide angle, aspect ratio, go fast, inference steps, seed, multiple angles, strength, guidance scale, LoRA weights, LoRA scale, output format, output quality, safety checker); `buildCameraMoveSection()` added to `PropertiesPanel.js`; all values stored on the node, included in the API request, and persisted via `onSerialize`/`onConfigure`
+45. ✅ Random seed button — "Random" button added next to the seed number input in the Camera Move settings panel; generates a random 32-bit integer and sets both the input field and `node._seed`; `PropertiesPanel.js` + `styles.css`
+46. ✅ Generated image persistence for NB2 and Recraft — `fetchAsBase64` added to `imageUtils.js`; `setResultCallback` added to `apiClient.js`; both model nodes store returned images as base64 in `_lastImages` and save via `onSerialize`/`onConfigure`
+47. ✅ Gallery — dedicated `gallery-db` IndexedDB database (`galleryStore.js`); all three generation nodes call `saveToGallery` after each successful generation; `GalleryModal.js` reads the store and displays images newest-first in a scrollable card grid; Gallery button added to top-left in `canvas.js`; styles in `styles.css`
+48. ✅ Claude node input bug fix — `_describe()` now falls back to reading image data directly from the source node (`src.imageData` / `src._outputImageData`) when `getInputData(0)` returns null; `ClaudeNode.js`
 
 ---
 

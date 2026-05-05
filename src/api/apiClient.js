@@ -30,6 +30,9 @@ let _apiKey = ''
 // Which model/format is active — set by the model node on every tick
 let _format = 'Nano Banana 2'
 
+// One-shot callback registered by model nodes to receive generated image URLs
+let _resultCallback = null
+
 // Ad formats selected in the AdFormatNode panel — empty means single generation
 let _selectedFormats = []
 
@@ -85,6 +88,15 @@ function setSelectedFormats(formats) {
  */
 function setFormat(format) {
   _format = format || 'Nano Banana 2'
+}
+
+/**
+ * Registers a one-shot callback that receives the generated image URLs.
+ * The node calls this just before generate() so it can store the result.
+ * Cleared automatically after the callback fires.
+ */
+function setResultCallback(fn) {
+  _resultCallback = fn
 }
 
 // ─── Button status helpers ────────────────────────────────────────────────────
@@ -173,6 +185,7 @@ async function _generateSingle() {
       if (imageUrls.length > 0) {
         showImage(imageUrls.map(url => ({ url, label: null })))
         setAnchorImageUrl(imageUrls[0])
+        if (_resultCallback) { _resultCallback(imageUrls); _resultCallback = null }
       }
       const cost = calculateCost(_generationParams)
       addSpent(cost)
@@ -182,6 +195,7 @@ async function _generateSingle() {
       if (imageUrls.length > 0) {
         showImage(imageUrls.map(url => ({ url, label: null })))
         setAnchorImageUrl(imageUrls[0])
+        if (_resultCallback) { _resultCallback(imageUrls); _resultCallback = null }
       }
       const cost = calculateRecraftCost()
       addSpent(cost)
@@ -245,12 +259,15 @@ async function _generateBatch() {
     }
   }
 
-  // Show all collected results in the modal
-  if (results.length > 0) showImage(results)
+  // Show all collected results in the modal and notify the node
+  if (results.length > 0) {
+    showImage(results)
+    if (_resultCallback) { _resultCallback(results.map(r => r.url)); _resultCallback = null }
+  }
 
   // Restore the button
   if (btn) { btn.disabled = false; btn.textContent = 'Generate' }
   log(`Batch complete — ${results.length} of ${total} succeeded`, results.length === total ? 'success' : 'info')
 }
 
-export { setPrompt, setGenerationParams, setReferenceImages, setApiKey, setFormat, setSelectedFormats, generate }
+export { setPrompt, setGenerationParams, setReferenceImages, setApiKey, setFormat, setSelectedFormats, setResultCallback, generate }
