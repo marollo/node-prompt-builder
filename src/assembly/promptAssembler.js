@@ -36,6 +36,21 @@ export function assemblePrompt(outputNode) {
  * Returns an array of { data, label } objects — one entry per uploaded image.
  * 'data' is the base64 image string. 'label' describes the image's role (e.g. 'subject reference').
  */
+// The exact sentence added to the prompt when the watermark checkbox is on.
+const WATERMARK_TEXT = 'add a watermark on the bottom-right corner of the picture with text: AI generated'
+
+/**
+ * Adds the watermark instruction sentence to the end of the prompt, but only
+ * when the checkbox is checked. Exists so the watermark wording lives in one
+ * place instead of being typed directly into the node file.
+ */
+export function appendWatermark(prompt, enabled) {
+  // Checkbox is off, or there is no prompt yet — leave the text untouched
+  if (!enabled || !prompt) return prompt
+
+  return `${prompt}. ${WATERMARK_TEXT}`
+}
+
 export function assembleImages(outputNode) {
   const images = []
 

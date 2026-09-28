@@ -22,6 +22,15 @@ const ROW_H = 30
 // Width of the decrement / increment buttons on each side of a control row
 const BTN_W = 28
 
+/**
+ * Reads the Replicate API key from localStorage.
+ * The key is saved there by the Settings modal whenever the user types it in —
+ * same pattern as the Claude key in claudeClient.js.
+ */
+function getReplicateApiKey() {
+  return (localStorage.getItem('replicate-api-key') || '').trim()
+}
+
 // The three camera controls — each maps to one model input parameter
 const CONTROLS = [
   { label: 'Orbit', key: '_rotateDeg', param: 'rotate_degrees', step: 15,  min: -90,  max: 90,  unit: '°', dec: '◀', inc: '▶' },
@@ -48,7 +57,7 @@ function CameraMoveNode() {
   // Result state
   this._outputImageData = null  // base64 string of the generated image
   this._resultEl        = null  // HTMLImageElement used to draw the thumbnail
-  this._aspectRatio     = null  // naturalWidth / naturalHeight of the result
+  this._thumbRatio      = null  // naturalWidth / naturalHeight of the result, for drawing only
   this._status          = 'idle' // 'idle' | 'generating' | 'done' | 'error'
 
   // All optional generation settings — adjustable from the Settings side panel
@@ -67,9 +76,6 @@ function CameraMoveNode() {
   this._outputQuality          = 95
   this._disableSafetyChecker   = false
 
-  // Replicate API key — typed directly on the node
-  this.addWidget('text', 'API Key', '', () => {})
-
   // Settings button — opens the side panel with all optional parameters
   this.addWidget('button', 'Settings', null, () => openPanel(this))
 
@@ -80,7 +86,7 @@ function CameraMoveNode() {
   this.addWidget('button', 'Download', null, () => this._download())
 }
 
-CameraMoveNode.title = 'Camera Move'
+CameraMoveNode.title = 'Camera Move (Replicate)'
 
 // ─── _controlsY ───────────────────────────────────────────────────────────────
 
@@ -91,9 +97,9 @@ CameraMoveNode.title = 'Camera Move'
 CameraMoveNode.prototype._controlsY = function () {
   const margin = 8
   let thumbH = 0
-  if (this._resultEl && this._resultEl.complete && this._aspectRatio) {
+  if (this._resultEl && this._resultEl.complete && this._thumbRatio) {
     const imgW = this.size[0] - margin * 2
-    thumbH = imgW / this._aspectRatio + margin * 2
+    thumbH = imgW / this._thumbRatio + margin * 2
   }
   return this.size[1] - CONTROLS.length * ROW_H - margin * 2 - thumbH
 }
@@ -109,9 +115,9 @@ CameraMoveNode.prototype.computeSize = function () {
   const size   = LiteGraph.LGraphNode.prototype.computeSize.call(this)
   const margin = 8
   size[1] += CONTROLS.length * ROW_H + margin * 2
-  if (this._outputImageData && this._aspectRatio) {
+  if (this._outputImageData && this._thumbRatio) {
     const imgW  = this.size[0] - margin * 2
-    size[1] += imgW / this._aspectRatio + margin * 2
+    size[1] += imgW / this._thumbRatio + margin * 2
   }
   return size
 }
@@ -223,9 +229,9 @@ CameraMoveNode.prototype.onDrawForeground = function (ctx) {
     ctx.font      = '11px monospace'
     ctx.textAlign = 'center'
     ctx.fillText('Error — check the log bar.', w / 2, thumbY + 14)
-  } else if (this._resultEl && this._resultEl.complete && this._aspectRatio) {
+  } else if (this._resultEl && this._resultEl.complete && this._thumbRatio) {
     const imgW = w - margin * 2
-    const imgH = imgW / this._aspectRatio
+    const imgH = imgW / this._thumbRatio
     const imgX = margin
     const imgY = this.size[1] - imgH - margin
 
@@ -264,9 +270,9 @@ CameraMoveNode.prototype._generate = async function () {
     return
   }
 
-  const apiKey = this.widgets[0].value
+  const apiKey = getReplicateApiKey()
   if (!apiKey) {
-    log('Camera Move: enter your Replicate API key.', 'error')
+    log('Camera Move: enter your Replicate API key in Settings.', 'error')
     return
   }
 
@@ -274,7 +280,7 @@ CameraMoveNode.prototype._generate = async function () {
   this._status          = 'generating'
   this._outputImageData = null
   this._resultEl        = null
-  this._aspectRatio     = null
+  this._thumbRatio      = null
   this.size             = this.computeSize()
   this.setDirtyCanvas(true, true)
 
@@ -333,7 +339,7 @@ CameraMoveNode.prototype._generate = async function () {
     // Build the thumbnail element — aspect ratio is set in onload
     const img  = new Image()
     img.onload = () => {
-      this._aspectRatio = img.naturalWidth / img.naturalHeight
+      this._thumbRatio = img.naturalWidth / img.naturalHeight
       this._status      = 'done'
       this.size         = this.computeSize()
       this.setDirtyCanvas(true, true)
@@ -437,7 +443,7 @@ CameraMoveNode.prototype.onConfigure = function (info) {
     this._outputImageData = info.extra.outputImageData
     const img  = new Image()
     img.onload = () => {
-      this._aspectRatio = img.naturalWidth / img.naturalHeight
+      this._thumbRatio = img.naturalWidth / img.naturalHeight
       this.size         = this.computeSize()
       this.setDirtyCanvas(true, true)
     }

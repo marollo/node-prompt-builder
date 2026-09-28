@@ -9,6 +9,10 @@ import { CLAUDE_PRICES, DEFAULT_MODEL } from '../utils/claudePricing.js'
 // localStorage keys
 const STORAGE_KEY       = 'claude-api-key'
 const STORAGE_MODEL_KEY = 'claude-model'
+// fal.ai key — read directly from this localStorage slot by apiClient.js
+const STORAGE_FALAI_KEY = 'falai-api-key'
+// Replicate key — read directly from this localStorage slot by CameraMoveNode.js
+const STORAGE_REPLICATE_KEY = 'replicate-api-key'
 
 // Available Claude models shown in the dropdown — label is what the user sees
 const CLAUDE_MODELS = [
@@ -60,6 +64,48 @@ function buildModal() {
     localStorage.setItem(STORAGE_KEY, input.value.trim())
   })
 
+  // Label + password input for the fal.ai API key (used by NB2 Model and Recraft V4 Pro)
+  const falaiLabel = document.createElement('label')
+  falaiLabel.className = 'panel-field-label'
+  falaiLabel.textContent = 'fal.ai API Key'
+
+  const falaiInput = document.createElement('input')
+  falaiInput.id = 'settings-falai-api-key'
+  falaiInput.type = 'password'
+  falaiInput.className = 'panel-input'
+  falaiInput.placeholder = 'fal-...'
+
+  // Load any previously saved key so the field is pre-filled on reopen
+  falaiInput.value = localStorage.getItem(STORAGE_FALAI_KEY) || ''
+
+  // Save to localStorage every time the user types
+  falaiInput.addEventListener('input', () => {
+    localStorage.setItem(STORAGE_FALAI_KEY, falaiInput.value.trim())
+  })
+
+  falaiLabel.appendChild(falaiInput)
+
+  // Label + password input for the Replicate API key (used by Camera Move)
+  const replicateLabel = document.createElement('label')
+  replicateLabel.className = 'panel-field-label'
+  replicateLabel.textContent = 'Replicate API Key'
+
+  const replicateInput = document.createElement('input')
+  replicateInput.id = 'settings-replicate-api-key'
+  replicateInput.type = 'password'
+  replicateInput.className = 'panel-input'
+  replicateInput.placeholder = 'r8_...'
+
+  // Load any previously saved key so the field is pre-filled on reopen
+  replicateInput.value = localStorage.getItem(STORAGE_REPLICATE_KEY) || ''
+
+  // Save to localStorage every time the user types
+  replicateInput.addEventListener('input', () => {
+    localStorage.setItem(STORAGE_REPLICATE_KEY, replicateInput.value.trim())
+  })
+
+  replicateLabel.appendChild(replicateInput)
+
   // Label + dropdown for choosing which Claude model to call
   const modelLabel = document.createElement('label')
   modelLabel.className = 'panel-field-label'
@@ -109,6 +155,8 @@ function buildModal() {
   box.appendChild(closeBtn)
   box.appendChild(title)
   box.appendChild(label)
+  box.appendChild(falaiLabel)
+  box.appendChild(replicateLabel)
   box.appendChild(modelLabel)
   overlay.appendChild(box)
   document.body.appendChild(overlay)

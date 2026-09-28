@@ -53,7 +53,7 @@ function ClaudeNode() {
   this.addWidget('button', 'Describe', null, () => this._describe())
 }
 
-ClaudeNode.title = 'Claude'
+ClaudeNode.title = 'Claude (Anthropic)'
 
 // ─── _describe ────────────────────────────────────────────────────────────────
 

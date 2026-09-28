@@ -20,13 +20,13 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **NB2 Model node**
 - Has one input slot that receives the prompt string from the Prompt Assembler
-- Canvas widgets: Aspect Ratio, Images, Output Format, Resolution, Safety, API Key
+- Canvas widgets: Aspect Ratio, Images, Output Format, Resolution, Safety
 - The Aspect Ratio widget is automatically disabled (greyed out, unclickable) when an Ad Format node is connected upstream with at least one format selected — because the ratio is then controlled per-format during batch generation
 - "Generate" button triggers image generation
 - "Cost Settings" button opens the side panel with Budget and Cooldown inputs
 - Bottom of the node shows three live stats drawn directly on the canvas: Spent / Est. / Req
 - The Est. figure multiplies the base cost by the number of selected formats when an Ad Format node is connected — so the user sees the total expected spend for the whole batch before clicking Generate
-- All generation state (API key, params, format) is pushed into `apiClient.js` on every tick
+- All generation state (params, format) is pushed into `apiClient.js` on every tick — the fal.ai API key is no longer a node widget, `apiClient.js` reads it straight from `localStorage` (set in the Settings modal)
 - After each successful generation, all returned images are fetched as base64, stored on the node as `_lastImages`, and saved to the dedicated `gallery-db` IndexedDB gallery store — the images persist across page reloads even if the node is later deleted
 
 **Ad Format node** *(optional — insert between Prompt Assembler and NB2 Model for batch generation)*
@@ -39,7 +39,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **Recraft V4 Pro node**
 - Has one input slot that receives the prompt string from the Prompt Assembler
-- Canvas widgets: Image Size (6 named options), Safety Checker (on/off), API Key
+- Canvas widgets: Image Size (6 named options), Safety Checker (on/off)
 - "Generate" button triggers image generation via the `fal-ai/recraft/v4/pro/text-to-image` endpoint
 - "Cost Settings" button opens the side panel with Budget and Cooldown inputs
 - Flat pricing: always $0.25 per image — no resolution tiers
@@ -60,7 +60,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - The **Download** button saves the generated image to the user's computer — the filename embeds the current camera values (e.g. `camera-move_orbit15_zoom2_tilt0.png`) for easy identification
 - The result image is drawn as a proportional thumbnail at the bottom of the node
 - One output socket passes the result as base64 so it can feed another Camera Move node (chaining moves) or any other node
-- The Replicate API key is entered directly on the node as a text widget
+- The Replicate API key is no longer a node widget — it is read straight from `localStorage` (set in the Settings modal) the moment Generate is clicked
 - All camera values, settings, and generated results are persisted to IndexedDB via `onSerialize`/`onConfigure`
 - The generated image is also saved to the `gallery-db` gallery store immediately after it is converted to base64 — so it appears in the Gallery even if this node is later removed from the canvas
 - The **seed** field in Settings has a **Random** button next to it — clicking it fills the field with a new random integer so the user can lock the result for reproducibility without having to invent a number
@@ -104,10 +104,11 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **Settings button and modal**
 - A small "Settings" button sits fixed in the top-left corner of the canvas
-- Clicking it opens a modal with two fields: Claude API Key (password input) and Claude Model (dropdown)
-- Three models are available: Haiku 4.5 (fast & cheap), Sonnet 4.6 (balanced), Opus 4.6 (most capable)
+- Clicking it opens a modal with five fields, top to bottom: Claude API Key, fal.ai API Key, Replicate API Key (all password inputs), and Claude Model (dropdown)
+- The fal.ai key is used by both the NB2 Model and Recraft V4 Pro nodes; the Replicate key is used by the Camera Move node — one field per vendor instead of a key box on every node
+- Three Claude models are available: Haiku 4.5 (fast & cheap), Sonnet 4.6 (balanced), Opus 4.6 (most capable)
 - Below the model dropdown, a small greyed-out line shows the current model's pricing: `Input $X.XX / 1M tokens  ·  Output $X.XX / 1M tokens` — updates live when the dropdown changes
-- Both values are saved to `localStorage` immediately as the user types or selects — no Save button needed
+- All key/model values are saved to `localStorage` immediately as the user types or selects — no Save button needed
 - The modal closes with ✕ or by clicking the dark backdrop behind it
 
 **Claude image-to-text**
@@ -321,7 +322,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **falai.js** — the Nano Banana 2 request formatter. Auto-routes between two endpoints based on what is in `_referenceImages`: if images are present it uses `/nano-banana-2/edit` and adds `image_urls` to the request body; otherwise it uses `/nano-banana-2` (text-to-image). Exports `parseResponse()` which returns all image URLs as an array, and `calculateCost(params)` for the resolution-based pricing table.
 
-**Nano Banana 2 generation params on the NB2 Model node** — five combo widgets: Aspect Ratio (15 options including `auto`), Images (1–4), Output Format (png/jpeg/webp), Resolution (0.5K/1K/2K/4K), Safety (1–6, default 4). All pushed to `apiClient.js` via `setGenerationParams()` every tick. API Key is also a canvas widget on the node, pushed via `setApiKey()`. Changing Resolution or Images instantly updates the estimated cost.
+**Nano Banana 2 generation params on the NB2 Model node** — five combo widgets: Aspect Ratio (15 options including `auto`), Images (1–4), Output Format (png/jpeg/webp), Resolution (0.5K/1K/2K/4K), Safety (1–6, default 4). All pushed to `apiClient.js` via `setGenerationParams()` every tick. The fal.ai API key is not a widget on this node — `apiClient.js` reads it from `localStorage` (`getFalaiApiKey()`) at request time. Changing Resolution or Images instantly updates the estimated cost.
 
 **NB2 Model canvas stats** — three values drawn directly on the canvas at the bottom of the NB2 Model node: Spent / Est. / Req. Drawn by `onDrawForeground(ctx)` using canvas 2D drawing calls. `computeSize()` is overridden to add 36px of extra height so the stats row is never hidden behind the last widget. The Est. value is `calculateCost(params) × formatCount` — where `formatCount` comes from `_getFormatCount()`, a helper that reads `selectedFormats.length` from the upstream Ad Format node (or returns 1 if none is connected).
 
@@ -331,7 +332,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **replicate.js** — the Replicate API request formatter. `buildRequest(modelPath, inputParams, apiKey)` builds a POST to `https://api.replicate.com/v1/models/{owner}/{name}/predictions` with a `Prefer: wait=60` header that makes the call block until the model finishes (up to 60 seconds). `parseResponse(data)` extracts the first output URL. `fetchImageAsBase64(url)` fetches the returned image URL and converts it to a base64 data URL so it can be stored in IndexedDB and passed through the graph like any other image.
 
-**CameraMoveNode canvas controls** — unlike content nodes whose values are edited via LiteGraph widgets or the side panel, the Camera Move node draws its three control rows directly on the canvas using `onDrawForeground` and detects clicks via `onMouseDown`. Each row has a left and right button area. When `onMouseDown` fires, it checks which row and which side was clicked, adjusts the stored value by one step, and calls `setDirtyCanvas()` to redraw immediately. LiteGraph calls `onMouseDown` only after ruling out widget clicks, so the Generate button and API Key widget work normally alongside the custom controls.
+**CameraMoveNode canvas controls** — unlike content nodes whose values are edited via LiteGraph widgets or the side panel, the Camera Move node draws its three control rows directly on the canvas using `onDrawForeground` and detects clicks via `onMouseDown`. Each row has a left and right button area. When `onMouseDown` fires, it checks which row and which side was clicked, adjusts the stored value by one step, and calls `setDirtyCanvas()` to redraw immediately. LiteGraph calls `onMouseDown` only after ruling out widget clicks, so the Settings/Generate/Download buttons work normally alongside the custom controls. The node no longer has its own API Key widget — `_generate()` reads the Replicate key from `localStorage` via `getReplicateApiKey()`.
 
 **Vite dev server proxy** — the Replicate API does not send CORS headers, so the browser blocks any direct call from `localhost`. The fix is in `vite.config.js`: any request the app makes to `/api/replicate/...` is caught by the Vite dev server and forwarded to `https://api.replicate.com/v1/...` server-side, stripping the `/api/replicate` prefix. The browser only ever talks to its own origin — no cross-origin request, no CORS block. `REPLICATE_API_BASE` in `replicate.js` is set to `/api/replicate` so all Replicate calls go through the proxy automatically. This proxy only works during local development — a production deployment would need a server-side route or a backend to do the same job.
 
@@ -351,7 +352,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **claudeNodeDraw.js** — a utility that was used to add a Claude cost stats bar to content nodes. The cost bar has since been removed from all content nodes — the file still exists but is no longer called by anything. It can be deleted in a future cleanup pass.
 
-**SettingsModal.js** — builds a full-screen modal overlay triggered by the Settings button. Contains a Claude API Key password input and a Claude Model dropdown. A live pricing line below the dropdown shows the input/output cost for the selected model and updates when the dropdown changes. Both values are saved to `localStorage` on every change — no explicit Save button. The modal is created once and toggled visible; the backdrop click and ✕ button both close it.
+**SettingsModal.js** — builds a full-screen modal overlay triggered by the Settings button. Contains three password inputs — Claude API Key, fal.ai API Key, Replicate API Key — plus the Claude Model dropdown. A live pricing line below the dropdown shows the input/output cost for the selected model and updates when the dropdown changes. All values are saved to `localStorage` on every change (`claude-api-key`, `falai-api-key`, `replicate-api-key`, `claude-model`) — no explicit Save button. The modal is created once and toggled visible; the backdrop click and ✕ button both close it. `apiClient.js` and `CameraMoveNode.js` each read their vendor's key back out of `localStorage` with a small local getter function (`getFalaiApiKey()`, `getReplicateApiKey()`), the same pattern `claudeClient.js` already used for the Claude key.
 
 **`src/prompts/*.md`** — one `.md` file per content node, each containing a system prompt written for that node's specific job. The Subject prompt asks Claude to describe only the main subject; the Lighting prompt asks only about light source, direction, and quality; and so on. Loaded at build time using Vite's `?raw` import (e.g. `import subjectPrompt from '../prompts/subject.md?raw'`). The file content becomes a plain JavaScript string stored as `this.claudePrompt` on the node. The end user never sees these files — only the tool creator edits them.
 
@@ -361,7 +362,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **ImageModal.js** — a full-screen overlay shown after every successful generation. Accepts an array of `{url, label}` objects. In single mode `label` is `null` and nothing extra is shown. In batch mode `label` is `"Format Name · W×H"` and appears between the thumbnail and the "Open full size" link.
 
-**apiClient.js module state** — `_apiKey`, `_format`, `_currentPrompt`, `_generationParams`, `_referenceImages`, and `_selectedFormats` are all stored as module-level variables. `generate()` branches on `_selectedFormats.length`: zero means single generation (`_generateSingle`), non-zero means batch (`_generateBatch`). A `_resultCallback` variable holds an optional one-shot function registered by model nodes via `setResultCallback(fn)` — after a successful generation the callback receives the array of image URLs, then is cleared so it does not fire again.
+**apiClient.js module state** — `_format`, `_currentPrompt`, `_generationParams`, `_referenceImages`, and `_selectedFormats` are all stored as module-level variables. The fal.ai API key is not stored as module state — `getFalaiApiKey()` reads it fresh from `localStorage` each time a request is built. `generate()` branches on `_selectedFormats.length`: zero means single generation (`_generateSingle`), non-zero means batch (`_generateBatch`). A `_resultCallback` variable holds an optional one-shot function registered by model nodes via `setResultCallback(fn)` — after a successful generation the callback receives the array of image URLs, then is cleared so it does not fire again.
 
 **galleryStore.js** — a completely separate IndexedDB database (`gallery-db`) dedicated to storing generated images. Each entry holds the base64 image string, a label identifying the source node (e.g. `'NB2 Model'`, `'Camera Move'`), and a Unix timestamp. `saveToGallery(src, label)` adds one entry. `loadAllFromGallery()` returns all entries sorted newest-first. This store is independent of the graph store — images survive page reload even if the node that generated them is later deleted from the canvas.
 

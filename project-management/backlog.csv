@@ -1,0 +1,5 @@
+id,title,status,priority,notes
+1,Image node should show a button to remove background,Backlog,Low,
+2,Add delete button to gallery,Backlog,Low,User confirmation is mandatory before proceeding with deletion of all images in the gallery
+3,Add Replicate model: topazlabs/image-upscale,Backlog,Medium,Doc about model is in the docs folder
+4,Fix Camera Move model prompt to preserve subject,Backlog,High,"Prompt example: ""Preserve strictly the subject, pose, outfit and body details"""

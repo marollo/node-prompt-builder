@@ -5,7 +5,7 @@
  */
 
 import { LiteGraph } from 'litegraph.js'
-import { assemblePrompt, assembleImages } from '../assembly/promptAssembler.js'
+import { assemblePrompt, assembleImages, appendWatermark } from '../assembly/promptAssembler.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
 import { setPrompt, setReferenceImages } from '../api/apiClient.js'
 
@@ -30,6 +30,9 @@ function PromptAssemblerNode() {
   // Declares what the side panel shows — a single readonly assembled prompt field
   this.panelFields = [{ label: 'Assembled Prompt', key: 'prompt', readonly: true }]
 
+  // Checkbox — when on, a watermark instruction sentence is added to the prompt
+  this._watermark = this.addWidget('toggle', 'AI generated', false, null, {})
+
   // Button that opens the side panel to read the assembled prompt
   this.addWidget('button', 'View Prompt', null, () => openPanel(this))
 
@@ -48,7 +51,8 @@ PromptAssemblerNode.title = 'Prompt Assembler'
  * Assembles the prompt from all connected content nodes and passes it downstream.
  */
 PromptAssemblerNode.prototype.onExecute = function () {
-  const prompt = assemblePrompt(this)
+  // Add the watermark sentence on the end, only if the checkbox is checked
+  const prompt = appendWatermark(assemblePrompt(this), this._watermark.value)
   this.values.prompt = prompt || 'Connect nodes to build your prompt…'
 
   // If the side panel is open, push the new prompt into the display textarea live

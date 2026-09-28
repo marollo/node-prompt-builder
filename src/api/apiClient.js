@@ -24,9 +24,6 @@ let _generationParams = {}
 // Latest reference images collected from all connected nodes
 let _referenceImages = []
 
-// API key entered on the model node canvas widget
-let _apiKey = ''
-
 // Which model/format is active — set by the model node on every tick
 let _format = 'Nano Banana 2'
 
@@ -66,11 +63,12 @@ function setReferenceImages(images) {
 }
 
 /**
- * Stores the API key from the model node canvas widget.
- * Called by the model node on every graph tick.
+ * Reads the fal.ai API key from localStorage.
+ * The key is saved there by the Settings modal whenever the user types it in —
+ * same pattern as the Claude key in claudeClient.js.
  */
-function setApiKey(key) {
-  _apiKey = key || ''
+function getFalaiApiKey() {
+  return (localStorage.getItem('falai-api-key') || '').trim()
 }
 
 /**
@@ -159,7 +157,7 @@ async function _generateSingle() {
   _setGenerating()
   log('Sending request…', 'info')
 
-  const settings = { url: '', apiKey: _apiKey }
+  const settings = { url: '', apiKey: getFalaiApiKey() }
 
   // Pick the right formatter based on which model node is active
   let requestData
@@ -232,7 +230,7 @@ async function _generateBatch() {
 
     // Override aspect ratio with this format's exact ratio
     const params = { ..._generationParams, aspectRatio: format.formatRatio }
-    const settings = { url: '', apiKey: _apiKey }
+    const settings = { url: '', apiKey: getFalaiApiKey() }
     const { url, options } = buildFalaiRequest(
       _currentPrompt, settings, params, getMode(), getAnchorImageUrl(), _referenceImages
     )
@@ -270,4 +268,4 @@ async function _generateBatch() {
   log(`Batch complete — ${results.length} of ${total} succeeded`, results.length === total ? 'success' : 'info')
 }
 
-export { setPrompt, setGenerationParams, setReferenceImages, setApiKey, setFormat, setSelectedFormats, setResultCallback, generate }
+export { setPrompt, setGenerationParams, setReferenceImages, setFormat, setSelectedFormats, setResultCallback, generate }

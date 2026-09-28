@@ -6,7 +6,7 @@
 
 import { LiteGraph } from 'litegraph.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
-import { setGenerationParams, setApiKey, setFormat, setResultCallback, generate } from '../api/apiClient.js'
+import { setGenerationParams, setFormat, setResultCallback, generate } from '../api/apiClient.js'
 import { getStats, updateEstimate } from '../api/CostControl.js'
 import { calculateCost } from '../api/formats/falai.js'
 import {
@@ -42,9 +42,6 @@ function NB2ModelNode() {
   // Safety default is "4" per the Nano Banana 2 API docs
   this._safety       = this.addWidget('combo', 'Safety',         '4',   null, { values: FALAI_SAFETY })
 
-  // API key entered directly on the canvas — visible to the user
-  this._apiKey = this.addWidget('text', 'API Key', '', null, {})
-
   // Stores the last batch of generated images as base64 strings for IndexedDB persistence
   this._lastImages = []
 
@@ -65,7 +62,7 @@ function NB2ModelNode() {
   this.addWidget('button', 'Cost Settings', null, () => openPanel(this))
 }
 
-NB2ModelNode.title = 'NB2 Model'
+NB2ModelNode.title = 'NB2 Model (fal.ai)'
 
 // ─── computeSize ──────────────────────────────────────────────────────────────
 
@@ -92,9 +89,6 @@ NB2ModelNode.prototype.computeSize = function () {
 NB2ModelNode.prototype.onExecute = function () {
   // Tell apiClient which format is active — always NB2 for this node
   setFormat('Nano Banana 2')
-
-  // Push the API key from the canvas widget into apiClient every tick
-  setApiKey(this._apiKey.value)
 
   // Build the params object and push it into apiClient
   const params = {

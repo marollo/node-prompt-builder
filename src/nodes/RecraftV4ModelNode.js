@@ -6,7 +6,7 @@
 
 import { LiteGraph } from 'litegraph.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
-import { setGenerationParams, setApiKey, setFormat, setResultCallback, generate } from '../api/apiClient.js'
+import { setGenerationParams, setFormat, setResultCallback, generate } from '../api/apiClient.js'
 import { getStats, updateEstimate } from '../api/CostControl.js'
 import { calculateCost } from '../api/formats/recraftV4.js'
 import { RECRAFT_IMAGE_SIZE, RECRAFT_SAFETY } from '../utils/nodeOptions.js'
@@ -29,9 +29,6 @@ function RecraftV4ModelNode() {
   // ── Generation parameters ─────────────────────────────────────────────────
   this._imageSize = this.addWidget('combo', 'Image Size', 'square_hd', null, { values: RECRAFT_IMAGE_SIZE })
   this._safety    = this.addWidget('combo', 'Safety Checker', 'on', null, { values: RECRAFT_SAFETY })
-
-  // API key entered directly on the canvas
-  this._apiKey = this.addWidget('text', 'API Key', '', null, {})
 
   // Stores the last generated image as base64 strings for IndexedDB persistence
   this._lastImages = []
@@ -56,7 +53,7 @@ function RecraftV4ModelNode() {
   this._hasReferenceImages = false
 }
 
-RecraftV4ModelNode.title = 'Recraft V4 Pro'
+RecraftV4ModelNode.title = 'Recraft V4 Pro (fal.ai)'
 
 // ─── computeSize ──────────────────────────────────────────────────────────────
 
@@ -115,9 +112,6 @@ RecraftV4ModelNode.prototype._collectReferenceImages = function () {
 RecraftV4ModelNode.prototype.onExecute = function () {
   // Tell apiClient which format is active — always Recraft V4 for this node
   setFormat('Recraft V4')
-
-  // Push the API key from the canvas widget into apiClient every tick
-  setApiKey(this._apiKey.value)
 
   // Build the params object and push it into apiClient
   const params = {
