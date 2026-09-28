@@ -63,6 +63,7 @@ function CameraMoveNode() {
   this._resultEl        = null  // HTMLImageElement used to draw the thumbnail
   this._thumbRatio      = null  // naturalWidth / naturalHeight of the result, for drawing only
   this._status          = 'idle' // 'idle' | 'generating' | 'done' | 'error'
+  this._lastSeed        = null   // seed actually used for the current result — read by downstream Camera Move nodes
 
   // All optional generation settings — adjustable from the Settings side panel
   this._prompt                 = ''
@@ -260,6 +261,27 @@ CameraMoveNode.prototype.onExecute = function () {
   this.setOutputData(0, this._outputImageData)
 }
 
+// ─── _pickSeed ────────────────────────────────────────────────────────────────
+
+/**
+ * Decides which seed number to send with this generation.
+ * A seed is the "starting noise" the model uses — reusing the same seed down a
+ * chain of Camera Move nodes keeps the look consistent from one move to the next.
+ * Order: the upstream Camera Move node's last seed → the seed typed in Settings → a new random one.
+ */
+CameraMoveNode.prototype._pickSeed = function () {
+  // Follow the image wire back to whichever node is plugged into our input
+  const link   = this.inputs[0].link != null ? this.graph.links[this.inputs[0].link] : null
+  const source = link ? this.graph.getNodeById(link.origin_id) : null
+
+  // If that node is another Camera Move node that has already generated, reuse its seed
+  if (source instanceof CameraMoveNode && source._lastSeed != null) return source._lastSeed
+
+  // Otherwise use the seed typed in Settings, or make a fresh random one (same range as the Random button)
+  if (this._seed !== null) return this._seed
+  return Math.floor(Math.random() * 2147483647)
+}
+
 // ─── _generate ────────────────────────────────────────────────────────────────
 
 /**
@@ -306,11 +328,12 @@ CameraMoveNode.prototype._generate = async function () {
     output_format:            this._outputFormat,
     output_quality:           this._outputQuality,
     disable_safety_checker:   this._disableSafetyChecker,
+    // Always send a seed so we know which one was used and can pass it down the chain
+    seed:                     this._pickSeed(),
   }
 
   // Include optional fields only when the user has set them
   if (this._numInferenceSteps !== null) inputParams.num_inference_steps  = this._numInferenceSteps
-  if (this._seed !== null)              inputParams.seed                  = this._seed
   if (this._trueGuidanceScale !== null) inputParams.true_guidance_scale   = this._trueGuidanceScale
   if (this._loraWeights)                inputParams.lora_weights           = this._loraWeights
   if (this._loraScale !== null)         inputParams.lora_scale             = this._loraScale
@@ -343,6 +366,9 @@ CameraMoveNode.prototype._generate = async function () {
     this._outputImageData = base64
     saveToGallery(base64, 'Camera Move')
 
+    // Remember the seed behind this image so a downstream Camera Move node can reuse it
+    this._lastSeed = inputParams.seed
+
     // Build the thumbnail element — aspect ratio is set in onload
     const img  = new Image()
     img.onload = () => {
@@ -354,7 +380,7 @@ CameraMoveNode.prototype._generate = async function () {
     img.src        = base64
     this._resultEl = img
 
-    log('Camera Move: image generated successfully.', 'success')
+    log('Camera Move: image generated successfully (seed ' + this._lastSeed + ').', 'success')
 
   } catch (err) {
     log('Camera Move: request failed — ' + err.message, 'error')
@@ -401,6 +427,7 @@ CameraMoveNode.prototype.onSerialize = function (info) {
     vertTilt:               this._vertTilt,
     outputImageData:        this._outputImageData,
     status:                 this._status,
+    lastSeed:               this._lastSeed,
     prompt:                 this._prompt,
     useWideAngle:           this._useWideAngle,
     aspectRatio:            this._aspectRatio,
@@ -429,6 +456,7 @@ CameraMoveNode.prototype.onConfigure = function (info) {
   this._moveForwd = Math.round(info.extra.moveForwd ?? 0)
   this._vertTilt  = Math.round(info.extra.vertTilt  ?? 0)
   this._status    = info.extra.status ?? 'idle'
+  this._lastSeed  = info.extra.lastSeed ?? null
 
   // Restore all optional settings, falling back to defaults for old saved nodes
   this._prompt                 = info.extra.prompt                 ?? ''
