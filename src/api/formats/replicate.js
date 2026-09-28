@@ -3,6 +3,7 @@
  * Used by CameraMoveNode to call the qwen-edit-multiangle model.
  * Replicate uses an async prediction pattern — the Prefer: wait=N header
  * makes the call block until the result is ready (up to 60 seconds).
+ * If the model needs longer (e.g. a cold start), waitForPrediction keeps checking back.
  */
 
 // Use the Vite dev-server proxy path (/api/replicate) instead of the real
@@ -42,6 +43,39 @@ function parseResponse(data) {
   return null
 }
 
+// How often to check back with Replicate, and how long to keep trying before giving up
+const POLL_INTERVAL_MS = 2000
+const POLL_TIMEOUT_MS  = 5 * 60 * 1000
+
+// Replicate's "finished" states — once a prediction reaches one of these it will not change again
+const FINAL_STATUSES = ['succeeded', 'failed', 'canceled']
+
+/**
+ * Keeps checking a Replicate prediction until it has finished, then returns the final response.
+ * Needed because a model that is "cold" (not recently used) can take longer to boot than the
+ * 60-second wait header allows — Replicate then replies "starting" with no image yet.
+ * onWaiting is called once, the first time we have to wait, so the node can tell the user.
+ */
+async function waitForPrediction(data, apiKey, onWaiting) {
+  const deadline = Date.now() + POLL_TIMEOUT_MS
+  if (!FINAL_STATUSES.includes(data.status) && onWaiting) onWaiting(data.status)
+
+  while (!FINAL_STATUSES.includes(data.status)) {
+    if (Date.now() > deadline) throw new Error('Replicate took longer than 5 minutes (last status: ' + data.status + ')')
+
+    // Pause before asking again, so we do not flood Replicate with requests
+    await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
+
+    // Ask for the prediction's current state by its ID, through the same Vite proxy
+    const response = await fetch(`${REPLICATE_API_BASE}/predictions/${data.id}`, {
+      headers: { 'Authorization': 'Bearer ' + apiKey }
+    })
+    if (!response.ok) throw new Error('could not check prediction status (' + response.status + ')')
+    data = await response.json()
+  }
+  return data
+}
+
 /**
  * Fetches an image from a URL and returns it as a base64 data URL.
  * Replicate outputs https:// image URLs — converting to base64 lets the result
@@ -58,4 +92,4 @@ async function fetchImageAsBase64(url) {
   })
 }
 
-export { buildRequest, parseResponse, fetchImageAsBase64 }
+export { buildRequest, parseResponse, waitForPrediction, fetchImageAsBase64 }

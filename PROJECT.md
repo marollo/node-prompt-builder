@@ -280,6 +280,7 @@ Build and verify each step in the browser before moving to the next:
 49. ✅ Vendor API keys moved to Settings — API Key widget removed from `RecraftV4ModelNode.js`, `NB2ModelNode.js`, and `CameraMoveNode.js`; two new password fields added to `SettingsModal.js` (fal.ai API Key, Replicate API Key), saved to `localStorage`; `apiClient.js` reads the fal.ai key via a new `getFalaiApiKey()` helper, `CameraMoveNode.js` reads the Replicate key via `getReplicateApiKey()`; `setApiKey()` and the `_apiKey` module variable removed from `apiClient.js`
 50. ✅ Camera Move preserves subject — `CameraMoveNode.js` always sends `PRESERVE_SUBJECT_PROMPT` ("Preserve strictly the subject, pose, outfit and body details.") as the `prompt` input; the user's Settings prompt is appended after it (backlog #4)
 51. ✅ Camera Move seed chaining — `_pickSeed()` in `CameraMoveNode.js` always sends a seed: upstream Camera Move node's `_lastSeed` → Settings seed → random; `_lastSeed` stored on success, persisted via `onSerialize`/`onConfigure`, shown in the success log (backlog #5)
+52. ✅ Replicate cold-start fix — `waitForPrediction()` added to `src/api/formats/replicate.js`; polls `/predictions/{id}` every 2s (5-minute limit) when the first reply is still `starting`/`processing`; `CameraMoveNode.js` calls it, logs a waiting message, and shows Replicate's `error` text on failure
 
 ---
 

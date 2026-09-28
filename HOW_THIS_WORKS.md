@@ -178,7 +178,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   └── formats/
 │   │       ├── falai.js              ← Nano Banana 2 formatter — auto-routes t2i vs edit, cost calc — BUILT
 │   │       ├── recraftV4.js          ← Recraft V4 Pro formatter — text-to-image only, flat $0.25/image — BUILT
-│   │       ├── replicate.js          ← Replicate REST formatter — buildRequest, parseResponse, fetchImageAsBase64 — BUILT
+│   │       ├── replicate.js          ← Replicate REST formatter — buildRequest, parseResponse, waitForPrediction, fetchImageAsBase64 — BUILT
 │   │       ├── automatic1111.js      ← Automatic1111 request format — placeholder
 │   │       └── comfyui.js            ← ComfyUI request format — placeholder
 │   ├── prompts/
@@ -332,7 +332,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - `_isAspectRatioOverridden()` — returns true when an Ad Format node is connected to the Prompt input and has at least one format selected. Sets `this._aspectRatio.disabled` accordingly on every tick.
 - `_getFormatCount()` — returns `selectedFormats.length` from the upstream Ad Format node, or 1 if no Ad Format node is connected or no formats are selected. Used to multiply the cost estimate.
 
-**replicate.js** — the Replicate API request formatter. `buildRequest(modelPath, inputParams, apiKey)` builds a POST to `https://api.replicate.com/v1/models/{owner}/{name}/predictions` with a `Prefer: wait=60` header that makes the call block until the model finishes (up to 60 seconds). `parseResponse(data)` extracts the first output URL. `fetchImageAsBase64(url)` fetches the returned image URL and converts it to a base64 data URL so it can be stored in IndexedDB and passed through the graph like any other image.
+**replicate.js** — the Replicate API request formatter. `buildRequest(modelPath, inputParams, apiKey)` builds a POST to `https://api.replicate.com/v1/models/{owner}/{name}/predictions` with a `Prefer: wait=60` header that makes the call block until the model finishes (up to 60 seconds). `parseResponse(data)` extracts the first output URL. `waitForPrediction(data, apiKey, onWaiting)` handles the case where the model was not ready within those 60 seconds (a "cold start" — Replicate replies with status `starting` or `processing` and no image yet): it checks back every 2 seconds at `/predictions/{id}` (through the same proxy) until the status is `succeeded`, `failed` or `canceled`, giving up with an error after 5 minutes. It calls `onWaiting` once so the node can log "model is starting — waiting for the result…". `fetchImageAsBase64(url)` fetches the returned image URL and converts it to a base64 data URL so it can be stored in IndexedDB and passed through the graph like any other image.
 
 **CameraMoveNode canvas controls** — unlike content nodes whose values are edited via LiteGraph widgets or the side panel, the Camera Move node draws its three control rows directly on the canvas using `onDrawForeground` and detects clicks via `onMouseDown`. Each row has a left and right button area. When `onMouseDown` fires, it checks which row and which side was clicked, adjusts the stored value by one step, and calls `setDirtyCanvas()` to redraw immediately. LiteGraph calls `onMouseDown` only after ruling out widget clicks, so the Settings/Generate/Download buttons work normally alongside the custom controls. The node no longer has its own API Key widget — `_generate()` reads the Replicate key from `localStorage` via `getReplicateApiKey()`.
 

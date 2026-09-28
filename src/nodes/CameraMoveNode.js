@@ -9,7 +9,7 @@
 
 import { LiteGraph } from 'litegraph.js'
 import { log } from '../panel/LogPanel.js'
-import { buildRequest, parseResponse, fetchImageAsBase64 } from '../api/formats/replicate.js'
+import { buildRequest, parseResponse, waitForPrediction, fetchImageAsBase64 } from '../api/formats/replicate.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
 import { saveToGallery } from '../utils/galleryStore.js'
 
@@ -351,11 +351,15 @@ CameraMoveNode.prototype._generate = async function () {
       return
     }
 
-    const data   = await response.json()
+    // If the model is still booting or working, keep checking back until it finishes
+    const data = await waitForPrediction(await response.json(), apiKey, (status) => {
+      log('Camera Move: model is ' + status + ' — waiting for the result…', 'info')
+    })
     const imgUrl = parseResponse(data)
 
     if (!imgUrl) {
-      log('Camera Move: model returned no image. Status: ' + data.status, 'error')
+      // Show Replicate's own error message when it gives one, otherwise just the final status
+      log('Camera Move: model returned no image. ' + (data.error || 'Status: ' + data.status), 'error')
       this._status = 'error'
       this.setDirtyCanvas(true, true)
       return
