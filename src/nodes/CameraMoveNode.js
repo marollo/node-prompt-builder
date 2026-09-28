@@ -16,6 +16,10 @@ import { saveToGallery } from '../utils/galleryStore.js'
 // Replicate model path — the owner/name slug from the model's URL
 const MODEL_PATH = 'qwen/qwen-edit-multiangle'
 
+// Instruction always sent to the model so it keeps the person unchanged
+// while only the camera angle moves. Any prompt typed in Settings is added after it.
+const PRESERVE_SUBJECT_PROMPT = 'Preserve strictly the subject, pose, outfit and body details.'
+
 // Height in pixels of each camera control row drawn on the canvas
 const ROW_H = 30
 
@@ -287,6 +291,10 @@ CameraMoveNode.prototype._generate = async function () {
   // Build the input object from camera values and all optional settings
   const inputParams = {
     image:                    imageData,
+    // Always start with the preserve instruction; add the user's own prompt after it if they typed one
+    prompt:                   this._prompt
+                                ? PRESERVE_SUBJECT_PROMPT + ' ' + this._prompt
+                                : PRESERVE_SUBJECT_PROMPT,
     rotate_degrees:           Math.round(this._rotateDeg),
     move_forward:             Math.round(this._moveForwd),
     vertical_tilt:            Math.round(this._vertTilt),
@@ -301,7 +309,6 @@ CameraMoveNode.prototype._generate = async function () {
   }
 
   // Include optional fields only when the user has set them
-  if (this._prompt)                     inputParams.prompt               = this._prompt
   if (this._numInferenceSteps !== null) inputParams.num_inference_steps  = this._numInferenceSteps
   if (this._seed !== null)              inputParams.seed                  = this._seed
   if (this._trueGuidanceScale !== null) inputParams.true_guidance_scale   = this._trueGuidanceScale

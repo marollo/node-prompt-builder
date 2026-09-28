@@ -278,6 +278,7 @@ Build and verify each step in the browser before moving to the next:
 47. ✅ Gallery — dedicated `gallery-db` IndexedDB database (`galleryStore.js`); all three generation nodes call `saveToGallery` after each successful generation; `GalleryModal.js` reads the store and displays images newest-first in a scrollable card grid; Gallery button added to top-left in `canvas.js`; styles in `styles.css`
 48. ✅ Claude node input bug fix — `_describe()` now falls back to reading image data directly from the source node (`src.imageData` / `src._outputImageData`) when `getInputData(0)` returns null; `ClaudeNode.js`
 49. ✅ Vendor API keys moved to Settings — API Key widget removed from `RecraftV4ModelNode.js`, `NB2ModelNode.js`, and `CameraMoveNode.js`; two new password fields added to `SettingsModal.js` (fal.ai API Key, Replicate API Key), saved to `localStorage`; `apiClient.js` reads the fal.ai key via a new `getFalaiApiKey()` helper, `CameraMoveNode.js` reads the Replicate key via `getReplicateApiKey()`; `setApiKey()` and the `_apiKey` module variable removed from `apiClient.js`
+50. ✅ Camera Move preserves subject — `CameraMoveNode.js` always sends `PRESERVE_SUBJECT_PROMPT` ("Preserve strictly the subject, pose, outfit and body details.") as the `prompt` input; the user's Settings prompt is appended after it (backlog #4)
 
 ---
 

@@ -57,6 +57,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - Clicking a button updates the displayed value immediately — no generation happens until Generate is clicked
 - A **Settings** button opens the side panel with all optional Replicate parameters grouped into five sections: Camera (prompt text, wide angle toggle, aspect ratio), Generation (go fast toggle, inference steps, seed), LoRA (multiple angles toggle and strength, guidance scale, custom LoRA weights and scale), Output (format: webp/jpg/png, quality), and Safety (disable safety checker)
 - The **Generate** button sends the input image, all three camera values, and all settings panel values to Replicate and waits for the result (up to 60 seconds)
+- Every request always includes a built-in instruction — *"Preserve strictly the subject, pose, outfit and body details."* (`PRESERVE_SUBJECT_PROMPT`) — so the model keeps the person unchanged while only the camera moves. Any prompt typed in the Settings panel is added after this sentence, not instead of it
 - The **Download** button saves the generated image to the user's computer — the filename embeds the current camera values (e.g. `camera-move_orbit15_zoom2_tilt0.png`) for easy identification
 - The result image is drawn as a proportional thumbnail at the bottom of the node
 - One output socket passes the result as base64 so it can feed another Camera Move node (chaining moves) or any other node
