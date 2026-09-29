@@ -12,6 +12,11 @@ import { calculateCost } from '../api/formats/recraftV4.js'
 import { RECRAFT_IMAGE_SIZE, RECRAFT_SAFETY } from '../utils/nodeOptions.js'
 import { fetchAsBase64 } from '../utils/imageUtils.js'
 import { saveToGallery } from '../utils/galleryStore.js'
+import { loadThumbnails, thumbnailGridHeight, drawThumbnailGrid, thumbnailIndexAt } from '../utils/thumbnailUtils.js'
+import { showImage } from '../panel/ImageModal.js'
+
+// Space in pixels around the thumbnail area at the bottom of the node
+const THUMB_MARGIN = 8
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -33,18 +38,15 @@ function RecraftV4ModelNode() {
   // Stores the last generated image as base64 strings for IndexedDB persistence
   this._lastImages = []
 
-  // Generate button — registers a result callback then triggers generation
-  this.addWidget('button', 'Generate', null, () => {
-    setResultCallback(async (urls) => {
-      try {
-        this._lastImages = await Promise.all(urls.map(u => fetchAsBase64(u)))
-        for (const src of this._lastImages) saveToGallery(src, 'Recraft V4 Pro')
-      } catch (e) {
-        // fetch failed — images stay visible in modal but won't persist
-      }
-    })
-    generate()
-  })
+  // Picture elements built from _lastImages — used to draw the thumbnail on the node
+  this._thumbEls = []
+
+  // 'generating' while a request is running, so the node can say so; otherwise 'idle'
+  this._status = 'idle'
+
+  // Generate button — must be a plain (non-async) function: LiteGraph silently
+  // ignores async functions here, which would leave the button doing nothing
+  this.addWidget('button', 'Generate', null, () => { this._generate() })
 
   // Cost Settings button — opens the side panel with budget and cooldown controls
   this.addWidget('button', 'Cost Settings', null, () => openPanel(this))
@@ -66,7 +68,85 @@ RecraftV4ModelNode.prototype.computeSize = function () {
   if (size[0] < 300) size[0] = 300
   // Base extra: 36px for stats row. Add 20px more when the warning is visible.
   size[1] += this._hasReferenceImages ? 56 : 36
+  // Plus room for the thumbnail (or the "Generating…" line) at the very bottom
+  size[1] += this._bottomAreaHeight()
   return size
+}
+
+// ─── _generate ────────────────────────────────────────────────────────────────
+
+/**
+ * Registers a result callback, then asks apiClient to generate.
+ * While waiting, the node shows "Generating…"; when the image arrives it appears as a thumbnail.
+ */
+RecraftV4ModelNode.prototype._generate = async function () {
+  setResultCallback(async (urls) => {
+    try {
+      this._lastImages = await Promise.all(urls.map(u => fetchAsBase64(u)))
+      for (const src of this._lastImages) saveToGallery(src, 'Recraft V4 Pro')
+      this._showThumbnails()
+    } catch (e) {
+      // fetch failed — images stay visible in modal but won't persist
+    }
+  })
+  // Show "Generating…" on the node until the request finishes (or is blocked)
+  this._status = 'generating'
+  this.size = this.computeSize()
+  await generate()
+  this._status = 'idle'
+  this.size = this.computeSize()
+}
+
+// ─── _bottomAreaHeight ────────────────────────────────────────────────────────
+
+/**
+ * Returns how much space the area under the stats row needs: the thumbnail, or a "Generating…" line.
+ * Both computeSize and the drawing code use it, so the picture always fits inside the node.
+ */
+RecraftV4ModelNode.prototype._bottomAreaHeight = function () {
+  if (this._status === 'generating') return 24
+  // _thumbEls may not exist yet — LiteGraph measures the node while it is still being built
+  const h = thumbnailGridHeight(this._thumbEls || [], this.size[0] - THUMB_MARGIN * 2)
+  return h > 0 ? h + THUMB_MARGIN : 0
+}
+
+// ─── _showThumbnails ──────────────────────────────────────────────────────────
+
+/**
+ * Loads the saved images as pictures and grows the node so they appear at its bottom.
+ * Called after a generation finishes and after the page reloads a saved graph.
+ */
+RecraftV4ModelNode.prototype._showThumbnails = function () {
+  loadThumbnails(this._lastImages, (els) => {
+    this._thumbEls = els
+    this.size = this.computeSize()
+    this.setDirtyCanvas(true, true)
+  })
+}
+
+// ─── onResize ─────────────────────────────────────────────────────────────────
+
+/**
+ * Called by LiteGraph while the user drags the node's corner.
+ * Wider node = bigger thumbnail, so the height is recalculated to keep it inside.
+ */
+RecraftV4ModelNode.prototype.onResize = function (size) {
+  size[1] = this.computeSize()[1]
+}
+
+// ─── onMouseDown ──────────────────────────────────────────────────────────────
+
+/**
+ * Opens the full-size image viewer when the user clicks the thumbnail.
+ * Returns true to stop LiteGraph from also starting a node drag.
+ */
+RecraftV4ModelNode.prototype.onMouseDown = function (e, pos) {
+  const w = this.size[0] - THUMB_MARGIN * 2
+  const top = this.size[1] - this._bottomAreaHeight()
+  const i = thumbnailIndexAt(this._thumbEls, THUMB_MARGIN, top, w, pos[0], pos[1])
+  if (i < 0) return false
+  showImage(this._lastImages.map(url => ({ url, label: null })))
+  return true
 }
 
 // ─── _collectReferenceImages ───────────────────────────────────────────────────
@@ -135,6 +215,7 @@ RecraftV4ModelNode.prototype.onExecute = function () {
 /**
  * Draws the session stats row on the node canvas.
  * If reference images are detected upstream, also draws a yellow warning banner.
+ * The last generated image is drawn at the very bottom, below the stats.
  * Called by LiteGraph on every render frame.
  */
 RecraftV4ModelNode.prototype.onDrawForeground = function (ctx) {
@@ -143,10 +224,22 @@ RecraftV4ModelNode.prototype.onDrawForeground = function (ctx) {
 
   const stats = getStats()
   const w     = this.size[0]
+  // The warning and stats rows sit just above the thumbnail area (which fills the bottom of the node)
+  const areaY = this.size[1] - this._bottomAreaHeight()
+
+  // ── Result area — "Generating…" or the thumbnail of the last generation ──
+  if (this._status === 'generating') {
+    ctx.fillStyle = '#666'
+    ctx.font      = '11px monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('Generating…', w / 2, areaY + 14)
+  } else {
+    drawThumbnailGrid(ctx, this._thumbEls, THUMB_MARGIN, areaY, w - THUMB_MARGIN * 2)
+  }
 
   // ── Warning banner ────────────────────────────────────────────────────────
   if (this._hasReferenceImages) {
-    const warnY = this.size[1] - 50
+    const warnY = areaY - 50
 
     // Yellow background strip behind the warning text
     ctx.fillStyle = '#78350f'
@@ -159,8 +252,8 @@ RecraftV4ModelNode.prototype.onDrawForeground = function (ctx) {
   }
 
   // ── Stats row ─────────────────────────────────────────────────────────────
-  const lineY = this.size[1] - 30
-  const textY = this.size[1] - 12
+  const lineY = areaY - 30
+  const textY = areaY - 12
 
   // Subtle separator line above the stats
   ctx.strokeStyle = '#444'
@@ -200,6 +293,8 @@ RecraftV4ModelNode.prototype.onSerialize = function (info) {
  */
 RecraftV4ModelNode.prototype.onConfigure = function (info) {
   if (info.extra) this._lastImages = info.extra.lastImages || []
+  // Rebuild the thumbnail so the last result is visible again after a reload
+  this._showThumbnails()
 }
 
 // ─── Register ─────────────────────────────────────────────────────────────────

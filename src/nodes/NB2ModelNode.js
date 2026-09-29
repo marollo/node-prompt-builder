@@ -18,6 +18,14 @@ import {
 } from '../utils/nodeOptions.js'
 import { fetchAsBase64 } from '../utils/imageUtils.js'
 import { saveToGallery } from '../utils/galleryStore.js'
+import { loadThumbnails, thumbnailGridHeight, drawThumbnailGrid, thumbnailIndexAt } from '../utils/thumbnailUtils.js'
+import { showImage } from '../panel/ImageModal.js'
+
+// Space in pixels around the thumbnail area at the bottom of the node
+const THUMB_MARGIN = 8
+
+// Height in pixels of the stats row (Spent / Est / Req)
+const STATS_H = 36
 
 // ─── Node class ────────────────────────────────────────────────────────────────
 
@@ -45,18 +53,15 @@ function NB2ModelNode() {
   // Stores the last batch of generated images as base64 strings for IndexedDB persistence
   this._lastImages = []
 
-  // Generate button — registers a result callback then triggers generation
-  this.addWidget('button', 'Generate', null, () => {
-    setResultCallback(async (urls) => {
-      try {
-        this._lastImages = await Promise.all(urls.map(u => fetchAsBase64(u)))
-        for (const src of this._lastImages) saveToGallery(src, 'NB2 Model')
-      } catch (e) {
-        // fetch failed — images stay visible in modal but won't persist
-      }
-    })
-    generate()
-  })
+  // Picture elements built from _lastImages — used to draw the thumbnails on the node
+  this._thumbEls = []
+
+  // 'generating' while a request is running, so the node can say so; otherwise 'idle'
+  this._status = 'idle'
+
+  // Generate button — must be a plain (non-async) function: LiteGraph silently
+  // ignores async functions here, which would leave the button doing nothing
+  this.addWidget('button', 'Generate', null, () => { this._generate() })
 
   // Cost Settings button — opens the side panel with budget and cooldown controls
   this.addWidget('button', 'Cost Settings', null, () => openPanel(this))
@@ -64,19 +69,97 @@ function NB2ModelNode() {
 
 NB2ModelNode.title = 'NB2 Model (fal.ai)'
 
+// ─── _generate ────────────────────────────────────────────────────────────────
+
+/**
+ * Registers a result callback, then asks apiClient to generate.
+ * While waiting, the node shows "Generating…"; when images arrive they appear as thumbnails.
+ */
+NB2ModelNode.prototype._generate = async function () {
+  setResultCallback(async (urls) => {
+    try {
+      this._lastImages = await Promise.all(urls.map(u => fetchAsBase64(u)))
+      for (const src of this._lastImages) saveToGallery(src, 'NB2 Model')
+      this._showThumbnails()
+    } catch (e) {
+      // fetch failed — images stay visible in modal but won't persist
+    }
+  })
+  // Show "Generating…" on the node until the request finishes (or is blocked)
+  this._status = 'generating'
+  this.size = this.computeSize()
+  await generate()
+  this._status = 'idle'
+  this.size = this.computeSize()
+}
+
 // ─── computeSize ──────────────────────────────────────────────────────────────
 
 /**
  * Tells LiteGraph how tall this node must be.
- * Adds 36px to the standard widget height so the stats row always has its own space.
+ * Adds 36px to the standard widget height so the stats row always has its own space,
+ * plus room for the thumbnails (or the "Generating…" line) underneath.
  * Without this LiteGraph shrinks the node to fit only the widgets, clipping the stats.
  */
 NB2ModelNode.prototype.computeSize = function () {
   const size = LiteGraph.LGraphNode.prototype.computeSize.call(this)
   // Enforce minimum width so the three stat columns never overlap
   if (size[0] < 300) size[0] = 300
-  size[1] += 36
+  size[1] += STATS_H + this._bottomAreaHeight()
   return size
+}
+
+// ─── _bottomAreaHeight ────────────────────────────────────────────────────────
+
+/**
+ * Returns how much space the area under the stats row needs: the thumbnails, or a "Generating…" line.
+ * Both computeSize and the drawing code use it, so the pictures always fit inside the node.
+ */
+NB2ModelNode.prototype._bottomAreaHeight = function () {
+  if (this._status === 'generating') return 24
+  // _thumbEls may not exist yet — LiteGraph measures the node while it is still being built
+  const h = thumbnailGridHeight(this._thumbEls || [], this.size[0] - THUMB_MARGIN * 2)
+  return h > 0 ? h + THUMB_MARGIN : 0
+}
+
+// ─── _showThumbnails ──────────────────────────────────────────────────────────
+
+/**
+ * Loads the saved images as pictures and grows the node so they appear at its bottom.
+ * Called after a generation finishes and after the page reloads a saved graph.
+ */
+NB2ModelNode.prototype._showThumbnails = function () {
+  loadThumbnails(this._lastImages, (els) => {
+    this._thumbEls = els
+    this.size = this.computeSize()
+    this.setDirtyCanvas(true, true)
+  })
+}
+
+// ─── onResize ─────────────────────────────────────────────────────────────────
+
+/**
+ * Called by LiteGraph while the user drags the node's corner.
+ * Wider node = bigger thumbnails, so the height is recalculated to keep them inside.
+ */
+NB2ModelNode.prototype.onResize = function (size) {
+  size[1] = this.computeSize()[1]
+}
+
+// ─── onMouseDown ──────────────────────────────────────────────────────────────
+
+/**
+ * Opens the full-size image viewer when the user clicks one of the thumbnails.
+ * Returns true to stop LiteGraph from also starting a node drag.
+ */
+NB2ModelNode.prototype.onMouseDown = function (e, pos) {
+  const w = this.size[0] - THUMB_MARGIN * 2
+  const top = this.size[1] - this._bottomAreaHeight()
+  const i = thumbnailIndexAt(this._thumbEls, THUMB_MARGIN, top, w, pos[0], pos[1])
+  if (i < 0) return false
+  // Show every image from the last generation; the viewer lists them all
+  showImage(this._lastImages.map(url => ({ url, label: null })))
+  return true
 }
 
 // ─── onExecute ────────────────────────────────────────────────────────────────
@@ -154,7 +237,7 @@ NB2ModelNode.prototype._getFormatCount = function () {
 // ─── onDrawForeground ─────────────────────────────────────────────────────────
 
 /**
- * Draws the session stats (Spent, Est., Requests) directly on the node canvas.
+ * Draws the session stats (Spent, Est., Requests) and, below them, the last generated images.
  * Called by LiteGraph on every render frame.
  */
 NB2ModelNode.prototype.onDrawForeground = function (ctx) {
@@ -163,8 +246,20 @@ NB2ModelNode.prototype.onDrawForeground = function (ctx) {
 
   const stats  = getStats()
   const w      = this.size[0]
-  const lineY  = this.size[1] - 30  // separator line position
-  const textY  = this.size[1] - 12  // stats text baseline
+  // The stats row sits just above the thumbnail area (which fills the bottom of the node)
+  const areaY  = this.size[1] - this._bottomAreaHeight()
+  const lineY  = areaY - 30  // separator line position
+  const textY  = areaY - 12  // stats text baseline
+
+  // ── Result area — "Generating…" or the thumbnails of the last generation ──
+  if (this._status === 'generating') {
+    ctx.fillStyle = '#666'
+    ctx.font      = '11px monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText('Generating…', w / 2, areaY + 14)
+  } else {
+    drawThumbnailGrid(ctx, this._thumbEls, THUMB_MARGIN, areaY, w - THUMB_MARGIN * 2)
+  }
 
   // Draw a subtle separator line to visually separate stats from the last widget
   ctx.strokeStyle = '#444'
@@ -205,6 +300,8 @@ NB2ModelNode.prototype.onSerialize = function (info) {
  */
 NB2ModelNode.prototype.onConfigure = function (info) {
   if (info.extra) this._lastImages = info.extra.lastImages || []
+  // Rebuild the thumbnails so the last result is visible again after a reload
+  this._showThumbnails()
 }
 
 // ─── Register ─────────────────────────────────────────────────────────────────
