@@ -281,6 +281,9 @@ Build and verify each step in the browser before moving to the next:
 50. ✅ Camera Move preserves subject — `CameraMoveNode.js` always sends `PRESERVE_SUBJECT_PROMPT` ("Preserve strictly the subject, pose, outfit and body details.") as the `prompt` input; the user's Settings prompt is appended after it (backlog #4)
 51. ✅ Camera Move seed chaining — `_pickSeed()` in `CameraMoveNode.js` always sends a seed: upstream Camera Move node's `_lastSeed` → Settings seed → random; `_lastSeed` stored on success, persisted via `onSerialize`/`onConfigure`, shown in the success log (backlog #5)
 52. ✅ Replicate cold-start fix — `waitForPrediction()` added to `src/api/formats/replicate.js`; polls `/predictions/{id}` every 2s (5-minute limit) when the first reply is still `starting`/`processing`; `CameraMoveNode.js` calls it, logs a waiting message, and shows Replicate's `error` text on failure
+53. ✅ Properties panel fix — `open()` in `PropertiesPanel.js` matches nodes by `node.type` instead of the renamed title, so new Camera Move / NB2 / Recraft nodes get their Settings and Cost sections again
+54. ✅ Result thumbnails on NB2 and Recraft — new `src/utils/thumbnailUtils.js`; both nodes draw `_lastImages` at their bottom (grid for 2+ images), click opens `showImage()`, "Generating…" status via `_generate()`, restored on reload (backlog #7)
+55. ✅ Qwen Multi-Angle node — `src/nodes/QwenMultiAngleNode.js` + `src/api/formats/qwenMultiAngle.js`; on-canvas Angle/Elevation/Zoom, full Settings panel (`buildQwenMultiAngleSection` in `PropertiesPanel.js`), seed chaining, $0.035/MP cost via `addSpent`, `getFalaiApiKey` exported from `apiClient.js` (backlog #6)
 
 ---
 

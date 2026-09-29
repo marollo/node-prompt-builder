@@ -4,3 +4,5 @@ id,title,status,priority,notes
 3,Add Replicate model: topazlabs/image-upscale,Backlog,Medium,Doc about model is in the docs folder
 4,Fix Camera Move model prompt to preserve subject,Done,High,"Prompt example: ""Preserve strictly the subject, pose, outfit and body details"""
 5,Add random seed number to Camera Move node,Done,Medium,"The Camera Move node should send a randomly generated seed number with the request, and this must also be passed to the next Camera Move node if connected via output-input sockets."
+6,Add new node for model Qwen Image Edit 2511 Multiple Angles (fal.ai),Done,High,Add UI elements to control all model settings
+7,Generate picture in the bottom side of the node,Done,High,"Valid for nodes NB2 Model, Recraft V4 Pro"

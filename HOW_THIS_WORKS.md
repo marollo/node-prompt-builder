@@ -8,7 +8,7 @@ This document is a plain English map of the codebase. It is updated after every 
 
 - A dark LiteGraph canvas fills the full browser window
 - One node appears on the canvas at startup: **Prompt Assembler** — the user adds whichever model node they need from the search list
-- Twelve node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model, Recraft V4 Pro, Claude, Camera Move, Image — LiteGraph's built-in nodes are hidden
+- Thirteen node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model, Recraft V4 Pro, Claude, Camera Move, Qwen Multi-Angle, Image — LiteGraph's built-in nodes are hidden
 - Standard flow: content nodes → Prompt Assembler → NB2 Model (or Recraft V4 Pro) → API → image modal
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
 
@@ -28,6 +28,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - The Est. figure multiplies the base cost by the number of selected formats when an Ad Format node is connected — so the user sees the total expected spend for the whole batch before clicking Generate
 - All generation state (params, format) is pushed into `apiClient.js` on every tick — the fal.ai API key is no longer a node widget, `apiClient.js` reads it straight from `localStorage` (set in the Settings modal)
 - After each successful generation, all returned images are fetched as base64, stored on the node as `_lastImages`, and saved to the dedicated `gallery-db` IndexedDB gallery store — the images persist across page reloads even if the node is later deleted
+- The last generated images are drawn **at the bottom of the node, under the stats row**. One image fills the full width at its own shape; two or more go in a 2-column grid of squares. Clicking a thumbnail opens all of them in the full-size image viewer. While a request is running the node shows "Generating…" instead. The node grows taller to fit, and recalculates its height when its corner is dragged wider (backlog #7)
 
 **Ad Format node** *(optional — insert between Prompt Assembler and NB2 Model for batch generation)*
 - Has one input slot (Prompt) and one output slot (Prompt) — passes the prompt straight through
@@ -47,6 +48,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - Batch generation (Ad Format node) is not supported — Recraft V4 does not accept an aspect ratio override
 - Bottom of the node shows the same three live stats as NB2 Model: Spent / Est. / Req
 - After each successful generation the returned image is fetched as base64, stored on the node as `_lastImages`, and saved to the `gallery-db` gallery store — same persistence behaviour as the NB2 Model node
+- The last generated image is drawn full-width at the bottom of the node, under the stats row — same thumbnail behaviour as the NB2 Model node (click to enlarge, "Generating…" while waiting)
 
 **Camera Move node** *(Model category)*
 - Takes an image as input and applies virtual camera movement using the `qwen/qwen-edit-multiangle` model on Replicate
@@ -66,6 +68,19 @@ This document is a plain English map of the codebase. It is updated after every 
 - All camera values, settings, and generated results are persisted to IndexedDB via `onSerialize`/`onConfigure`
 - The generated image is also saved to the `gallery-db` gallery store immediately after it is converted to base64 — so it appears in the Gallery even if this node is later removed from the canvas
 - The **seed** field in Settings has a **Random** button next to it — clicking it fills the field with a new random integer so the user can lock the result for reproducibility without having to invent a number
+
+**Qwen Multi-Angle node** *(Model category)*
+- The fal.ai twin of Camera Move: takes an image and re-draws it from a new camera position using the `fal-ai/qwen-image-edit-2511-multiple-angles` model (backlog #6)
+- Three control rows drawn on the node, each with step-down / step-up buttons:
+  - **Angle** — walks around the subject in 45° steps: 0° front, 90° right side, 180° back, 270° left side. It loops round, so one step below 0° is 315° (`horizontal_angle`)
+  - **Elevation** — camera height in 15° steps from −30° (low, looking up) to 90° (bird's-eye) (`vertical_angle`)
+  - **Zoom** — 0 = wide shot, 5 = medium (default), 10 = close-up (`zoom`)
+- **Settings** opens the side panel with every other model setting: additional prompt, negative prompt, LoRA scale (strength of the camera effect), guidance scale, inference steps, acceleration, seed + Random button, image size (auto = same as input), number of images (1–4), output format and safety checker. Blank number boxes are left out of the request so the model uses its own default
+- **Generate** sends the image to fal.ai directly (no proxy needed — fal.ai allows browser calls). Like Camera Move it always starts `additional_prompt` with *"Preserve strictly the subject, pose, outfit and body details."*, and it always sends a seed chosen by `_pickSeed()` — the upstream node's seed (Qwen **or** Camera Move) → the Settings seed → random. The seed fal.ai reports back is stored as `_lastSeed` for the next node in the chain
+- Results are drawn as a thumbnail grid at the bottom of the node (same helper as NB2), saved to the gallery, and the first image is sent out of the output socket
+- Cost is $0.035 per megapixel of output. It is worked out from the real size of the returned images, added to the shared session spend (`addSpent`), and shown in the log bar together with the seed
+- **Download** saves every result, with the camera values in the file name (e.g. `qwen-angle90_elev30_zoom8_1.png`)
+- Reads the fal.ai key from Settings (`getFalaiApiKey()` in `apiClient.js`). Camera values, all settings, results and seed are saved with the graph
 
 **Claude node** *(Model category)*
 - Takes an image as input (from an Image node or any node with an image output) and returns a text description using the Claude API
@@ -156,6 +171,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   ├── ImageNode.js              ← Media category node — uploads an image, draws proportional thumbnail on canvas, outputs base64 — BUILT
 │   │   ├── ClaudeNode.js             ← Model category node — image-to-text via Claude API; dropdown selects description type; output wires into Prompt Assembler — BUILT
 │   │   ├── CameraMoveNode.js         ← Model category node — applies virtual camera orbit/zoom/tilt to an image via Replicate qwen-edit-multiangle; canvas controls + thumbnail — BUILT
+│   │   ├── QwenMultiAngleNode.js     ← Model category node — angle/elevation/zoom camera move via fal.ai Qwen Image Edit 2511 Multiple Angles; canvas controls + thumbnail grid — BUILT
 │   │   └── ReferenceImageNode.js     ← Standalone reference image node — placeholder (not built)
 │   ├── panel/
 │   │   ├── PropertiesPanel.js        ← Side panel for editing node text fields and images — BUILT
@@ -178,6 +194,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   └── formats/
 │   │       ├── falai.js              ← Nano Banana 2 formatter — auto-routes t2i vs edit, cost calc — BUILT
 │   │       ├── recraftV4.js          ← Recraft V4 Pro formatter — text-to-image only, flat $0.25/image — BUILT
+│   │       ├── qwenMultiAngle.js     ← Qwen Image Edit 2511 Multiple Angles (fal.ai) — buildRequest, parseResponse, calculateCost ($0.035/MP) — BUILT
 │   │       ├── replicate.js          ← Replicate REST formatter — buildRequest, parseResponse, waitForPrediction, fetchImageAsBase64 — BUILT
 │   │       ├── automatic1111.js      ← Automatic1111 request format — placeholder
 │   │       └── comfyui.js            ← ComfyUI request format — placeholder
@@ -192,6 +209,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │       ├── claudePricing.js          ← Pricing table for all Claude models — single source of truth — BUILT
 │       ├── claudeNodeDraw.js         ← Shared canvas drawing utility for Claude stats bar on content nodes — BUILT
 │       ├── imageUtils.js             ← fetchAsBase64(url) — converts a CDN image URL to a base64 data string — BUILT
+│       ├── thumbnailUtils.js         ← Loads, measures, draws and hit-tests result thumbnails at the bottom of model nodes — BUILT
 │       ├── galleryStore.js           ← Dedicated gallery-db IndexedDB store — saveToGallery / loadAllFromGallery — BUILT
 │       └── storageUtils.js           ← IndexedDB save/load wrapper for the graph — BUILT
 ├── public/                           ← Static assets (empty for now)
@@ -248,7 +266,7 @@ This document is a plain English map of the codebase. It is updated after every 
 ### When the user clicks "Cost Settings" on the NB2 Model node
 1. `PropertiesPanel.open(this)` opens with the NB2 Model node
 2. The panel has no text fields (NB2 Model's `panelFields` is empty)
-3. Because the node title is "NB2 Model", the panel builds the Cost Settings section via `initCostUI()`
+3. Because the node type is `model/NB2Model`, the panel builds the Cost Settings section via `initCostUI()` (the panel always checks `node.type`, never the visible title, which can be renamed)
 4. The Generate button in the panel is wired to `generate()` in `apiClient.js`
 
 ### When the user clicks Generate (single mode — no Ad Format node)
@@ -273,6 +291,16 @@ This document is a plain English map of the codebase. It is updated after every 
    - If one format fails, the loop continues with the next
 5. After all formats are processed, `showImage(results)` opens the modal with all images labeled by format
 6. The log bar shows a final summary: `Batch complete — N of total succeeded`
+
+### When the user clicks Generate on the Qwen Multi-Angle node
+
+1. `_generate()` reads the image arriving at the input socket and the fal.ai key from `localStorage` — if either is missing it logs a message and stops
+2. The node switches to "Generating…" and `_buildInput()` gathers the three camera values plus every Settings value, using the model's own field names; blank number boxes are dropped
+3. `_pickSeed()` picks the seed (upstream node's seed → Settings seed → random)
+4. `buildRequest()` in `qwenMultiAngle.js` wraps it all in a POST to fal.ai; the browser waits for the reply
+5. On success the image links are downloaded as base64, saved to the gallery, and turned into thumbnails with `loadThumbnails()`
+6. Once the pictures have loaded their real size is known, so `calculateCost()` works out the price, `addSpent()` adds it to the session total, and the log bar shows cost and seed
+7. On failure the log bar shows fal.ai's own explanation and the node shows "Error — check the log bar."
 
 ### How the cooldown timer works
 
@@ -367,6 +395,12 @@ This document is a plain English map of the codebase. It is updated after every 
 **apiClient.js module state** — `_format`, `_currentPrompt`, `_generationParams`, `_referenceImages`, and `_selectedFormats` are all stored as module-level variables. The fal.ai API key is not stored as module state — `getFalaiApiKey()` reads it fresh from `localStorage` each time a request is built. `generate()` branches on `_selectedFormats.length`: zero means single generation (`_generateSingle`), non-zero means batch (`_generateBatch`). A `_resultCallback` variable holds an optional one-shot function registered by model nodes via `setResultCallback(fn)` — after a successful generation the callback receives the array of image URLs, then is cleared so it does not fire again.
 
 **galleryStore.js** — a completely separate IndexedDB database (`gallery-db`) dedicated to storing generated images. Each entry holds the base64 image string, a label identifying the source node (e.g. `'NB2 Model'`, `'Camera Move'`), and a Unix timestamp. `saveToGallery(src, label)` adds one entry. `loadAllFromGallery()` returns all entries sorted newest-first. This store is independent of the graph store — images survive page reload even if the node that generated them is later deleted from the canvas.
+
+**thumbnailUtils.js** — shared drawing helpers for showing results at the bottom of a model node. `loadThumbnails(list, onReady)` turns base64 strings into picture elements and calls back once they have all loaded (a picture has no size until then). `thumbnailGridHeight(images, width)` says how tall the area must be — one picture keeps its own shape at full width; two or more become a 2-column grid of squares. `drawThumbnailGrid(ctx, images, x, y, width)` paints them with rounded corners, cropping each square from the centre of the picture. `thumbnailIndexAt(...)` tells which picture a click landed on. Each node using it has a `_bottomAreaHeight()` method that both `computeSize()` and `onDrawForeground()` call, so the node height and the drawing always agree. Used by NB2 Model, Recraft V4 Pro and Qwen Multi-Angle.
+
+**Button widgets must be plain functions** — LiteGraph's `addWidget` quietly ignores a callback that is an `async` function (it only accepts real `Function` objects), which leaves the button dead. Nodes therefore write `() => { this._generate() }` and put the waiting logic inside the `_generate()` method.
+
+**Settings panel section helpers** — `makeSectionHelpers(content)` in `PropertiesPanel.js` returns `sectionTitle()` and `row()` so the Camera Move and Qwen Multi-Angle settings panels share one look. The Qwen section also uses small builders (`numberField`, `selectField`, `checkField`, `textField`) that each create one input and wire it straight to a property on the node.
 
 **imageUtils.js** — `fetchAsBase64(url)` downloads an `https://` image URL and returns it as a base64 data URL. Used by the NB2 Model and Recraft V4 Pro nodes to convert the temporary CDN URLs returned by fal.ai into storable base64 strings immediately after generation.
 
