@@ -268,4 +268,5 @@ async function _generateBatch() {
   log(`Batch complete — ${results.length} of ${total} succeeded`, results.length === total ? 'success' : 'info')
 }
 
-export { setPrompt, setGenerationParams, setReferenceImages, setFormat, setSelectedFormats, setResultCallback, generate }
+// getFalaiApiKey is also used by model nodes that call fal.ai on their own (e.g. Qwen Multi-Angle)
+export { setPrompt, setGenerationParams, setReferenceImages, setFormat, setSelectedFormats, setResultCallback, generate, getFalaiApiKey }

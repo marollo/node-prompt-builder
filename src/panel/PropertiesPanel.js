@@ -89,6 +89,11 @@ export function open(node) {
     buildCameraMoveSection(node, content)
   }
 
+  // Qwen Multi-Angle node gets its own settings section
+  if (node.type === 'model/QwenMultiAngle') {
+    buildQwenMultiAngleSection(node, content)
+  }
+
   // Model nodes get the cost settings section (budget and cooldown)
   if (node.type === 'model/NB2Model' || node.type === 'model/RecraftV4Model') {
     const costContainer = document.createElement('div')
@@ -211,12 +216,10 @@ function buildImageSection(node, content) {
 }
 
 /**
- * Builds the full settings panel for the Camera Move node.
- * Shows every optional API parameter grouped into labelled sections.
- * Each input is wired directly to the node property so changes take effect
- * immediately — no Save button needed.
+ * Returns two small builders that add section headings and labelled inputs to the panel.
+ * Shared by the Camera Move and Qwen Multi-Angle settings so both panels look the same.
  */
-function buildCameraMoveSection(node, content) {
+function makeSectionHelpers(content) {
   // Creates a section title divider
   function sectionTitle(text) {
     const div = document.createElement('div')
@@ -239,6 +242,18 @@ function buildCameraMoveSection(node, content) {
     label.appendChild(inputEl)
     content.appendChild(label)
   }
+
+  return { sectionTitle, row }
+}
+
+/**
+ * Builds the full settings panel for the Camera Move node.
+ * Shows every optional API parameter grouped into labelled sections.
+ * Each input is wired directly to the node property so changes take effect
+ * immediately — no Save button needed.
+ */
+function buildCameraMoveSection(node, content) {
+  const { sectionTitle, row } = makeSectionHelpers(content)
 
   // ── Camera ──────────────────────────────────────────────────────────────────
   sectionTitle('Camera')
@@ -400,6 +415,89 @@ function buildCameraMoveSection(node, content) {
   safetyEl.checked = node._disableSafetyChecker
   safetyEl.addEventListener('change', () => { node._disableSafetyChecker = safetyEl.checked })
   row('Disable Safety Checker', safetyEl, '(default off)')
+}
+
+/**
+ * Builds the settings panel for the Qwen Multi-Angle node (every model setting except the
+ * three camera values, which are on the node itself). Each input writes straight to the node.
+ */
+function buildQwenMultiAngleSection(node, content) {
+  const { sectionTitle, row } = makeSectionHelpers(content)
+
+  // Number box tied to node[key]. A blank box stores null ("use the model default").
+  function numberField(key, min, max, step, placeholder) {
+    const el = document.createElement('input')
+    Object.assign(el, { type: 'number', className: 'panel-input', step, placeholder: placeholder || '' })
+    // Only set limits that exist — the seed box, for example, has none
+    if (min !== null) el.min = min
+    if (max !== null) el.max = max
+    el.value = node[key] ?? ''
+    el.addEventListener('input', () => { node[key] = el.value !== '' ? Number(el.value) : null })
+    return el
+  }
+
+  // Dropdown tied to node[key]. `parse` turns the chosen text back into the stored type (e.g. a number).
+  function selectField(key, options, parse = v => v) {
+    const el = document.createElement('select')
+    el.className = 'panel-input'
+    for (const opt of options) {
+      const o = document.createElement('option')
+      o.value = o.textContent = opt
+      if (String(opt) === String(node[key])) o.selected = true
+      el.appendChild(o)
+    }
+    el.addEventListener('change', () => { node[key] = parse(el.value) })
+    return el
+  }
+
+  // Tick box tied to node[key]
+  function checkField(key) {
+    const el = document.createElement('input')
+    el.type = 'checkbox'
+    el.checked = node[key]
+    el.addEventListener('change', () => { node[key] = el.checked })
+    return el
+  }
+
+  // Multi-line text box tied to node[key]
+  function textField(key, placeholder) {
+    const el = document.createElement('textarea')
+    Object.assign(el, { className: 'panel-input', rows: 3, placeholder, value: node[key] })
+    el.addEventListener('input', () => { node[key] = el.value })
+    return el
+  }
+
+  sectionTitle('Prompt')
+  row('Additional Prompt', textField('_prompt', 'Added after the built-in "preserve the subject" instruction…'), '(optional)')
+  row('Negative Prompt', textField('_negativePrompt', 'Things the model should avoid…'), '(optional)')
+
+  sectionTitle('Generation')
+  row('LoRA Scale', numberField('_loraScale', 0, 4, 0.1), '(0–4, strength of the camera effect, default 1)')
+  row('Guidance Scale', numberField('_guidanceScale', 1, 20, 0.5), '(1–20, default 4.5)')
+  row('Inference Steps', numberField('_numInferenceSteps', 1, 50, 1), '(1–50, default 28)')
+  row('Acceleration', selectField('_acceleration', ['regular', 'none']), '(regular = faster)')
+
+  // Seed box with a Random button beside it (same layout as the Camera Move panel)
+  const seedWrapper = document.createElement('div')
+  seedWrapper.className = 'seed-input-row'
+  const seedEl = numberField('_seed', null, null, 1, 'Leave blank for random')
+  const seedRandomBtn = document.createElement('button')
+  seedRandomBtn.textContent = 'Random'
+  seedRandomBtn.className = 'seed-random-btn'
+  seedRandomBtn.addEventListener('click', () => {
+    node._seed = Math.floor(Math.random() * 2147483647)
+    seedEl.value = node._seed
+  })
+  seedWrapper.append(seedEl, seedRandomBtn)
+  row('Seed', seedWrapper, '(optional — a chained node reuses the upstream seed)')
+
+  sectionTitle('Output')
+  row('Image Size', selectField('_imageSize', ['auto', 'square_hd', 'square', 'portrait_4_3', 'portrait_16_9', 'landscape_4_3', 'landscape_16_9']), '(auto = same as input)')
+  row('Number of Images', selectField('_numImages', [1, 2, 3, 4], Number))
+  row('Output Format', selectField('_outputFormat', ['png', 'jpeg', 'webp']))
+
+  sectionTitle('Safety')
+  row('Safety Checker', checkField('_safetyChecker'), '(default on)')
 }
 
 /**
