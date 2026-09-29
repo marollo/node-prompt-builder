@@ -82,13 +82,15 @@ export function open(node) {
     buildImageSection(node, content)
   }
 
-  // Camera Move node gets its own settings section
-  if (node.title === 'Camera Move') {
+  // Camera Move node gets its own settings section.
+  // We check node.type (the fixed internal ID) rather than node.title,
+  // because the visible title can be renamed and would silently break this check.
+  if (node.type === 'model/CameraMove') {
     buildCameraMoveSection(node, content)
   }
 
   // Model nodes get the cost settings section (budget and cooldown)
-  if (node.title === 'NB2 Model' || node.title === 'Recraft V4 Pro') {
+  if (node.type === 'model/NB2Model' || node.type === 'model/RecraftV4Model') {
     const costContainer = document.createElement('div')
     costContainer.id = 'cost-section'
     content.appendChild(costContainer)
