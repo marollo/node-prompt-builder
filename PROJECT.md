@@ -284,6 +284,7 @@ Build and verify each step in the browser before moving to the next:
 53. ✅ Properties panel fix — `open()` in `PropertiesPanel.js` matches nodes by `node.type` instead of the renamed title, so new Camera Move / NB2 / Recraft nodes get their Settings and Cost sections again
 54. ✅ Result thumbnails on NB2 and Recraft — new `src/utils/thumbnailUtils.js`; both nodes draw `_lastImages` at their bottom (grid for 2+ images), click opens `showImage()`, "Generating…" status via `_generate()`, restored on reload (backlog #7)
 55. ✅ Qwen Multi-Angle node — `src/nodes/QwenMultiAngleNode.js` + `src/api/formats/qwenMultiAngle.js`; on-canvas Angle/Elevation/Zoom, full Settings panel (`buildQwenMultiAngleSection` in `PropertiesPanel.js`), seed chaining, $0.035/MP cost via `addSpent`, `getFalaiApiKey` exported from `apiClient.js` (backlog #6)
+56. ✅ Close-up node — `src/nodes/CloseUpNode.js`; preset close-up prompt + on-node "Close-up on" text field, image passed through to a second output; NB2 / Recraft now use their own Prompt wire and re-apply their own settings in `_generate()`; `generate()` in `apiClient.js` freezes the prompt at click time (backlog #10)
 
 ---
 

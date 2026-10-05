@@ -156,16 +156,19 @@ async function generate() {
     log('Generate blocked — budget reached or cooldown active', 'info')
     return
   }
-  if (!_currentPrompt || _currentPrompt.startsWith('Connect nodes')) {
+  // Take a copy of the prompt right now, at click time. The Prompt Assembler rewrites the shared
+  // prompt on every tick, so reading it later (between batch requests) could pick up a different text
+  const prompt = _currentPrompt
+  if (!prompt || prompt.startsWith('Connect nodes')) {
     _showButtonError('No prompt yet')
     log('No prompt yet — connect nodes to the Prompt Assembler', 'info')
     return
   }
 
   if (_selectedFormats.length > 0) {
-    await _generateBatch()
+    await _generateBatch(prompt)
   } else {
-    await _generateSingle()
+    await _generateSingle(prompt)
   }
 }
 
@@ -173,7 +176,7 @@ async function generate() {
  * Sends a single request using the current params — the original behaviour.
  * Used when no Ad Format node is connected.
  */
-async function _generateSingle() {
+async function _generateSingle(prompt) {
   _setGenerating()
   log('Sending request…', 'info')
 
@@ -182,11 +185,11 @@ async function _generateSingle() {
   // Pick the right formatter based on which model node is active
   let requestData
   if (_format === 'Nano Banana 2') {
-    requestData = buildFalaiRequest(_currentPrompt, settings, _generationParams, getMode(), getAnchorImageUrl(), _allReferenceImages())
+    requestData = buildFalaiRequest(prompt, settings, _generationParams, getMode(), getAnchorImageUrl(), _allReferenceImages())
   } else if (_format === 'Recraft V4') {
-    requestData = buildRecraftRequest(_currentPrompt, settings, _generationParams)
+    requestData = buildRecraftRequest(prompt, settings, _generationParams)
   } else {
-    requestData = buildGenericRequest(_currentPrompt, settings)
+    requestData = buildGenericRequest(prompt, settings)
   }
   const { url, options } = requestData
 
@@ -236,7 +239,7 @@ async function _generateSingle() {
  * Each request uses the format's exact aspect ratio, overriding the NB2 widget.
  * Results are collected and shown together in the modal with format labels.
  */
-async function _generateBatch() {
+async function _generateBatch(prompt) {
   const total = _selectedFormats.length
   const results = []
   const btn = document.getElementById('api-generate-btn')
@@ -252,7 +255,7 @@ async function _generateBatch() {
     const params = { ..._generationParams, aspectRatio: format.formatRatio }
     const settings = { url: '', apiKey: getFalaiApiKey() }
     const { url, options } = buildFalaiRequest(
-      _currentPrompt, settings, params, getMode(), getAnchorImageUrl(), _allReferenceImages()
+      prompt, settings, params, getMode(), getAnchorImageUrl(), _allReferenceImages()
     )
 
     try {

@@ -6,7 +6,7 @@
 
 import { LiteGraph } from 'litegraph.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
-import { setGenerationParams, setFormat, setResultCallback, setSocketImage, generate } from '../api/apiClient.js'
+import { setPrompt, setGenerationParams, setFormat, setResultCallback, setSocketImage, generate } from '../api/apiClient.js'
 import { getStats, updateEstimate } from '../api/CostControl.js'
 import { calculateCost } from '../api/formats/falai.js'
 import {
@@ -97,6 +97,12 @@ NB2ModelNode.prototype._generate = async function () {
   this.size = this.computeSize()
   // Hand over the connected picture only now, at click time, so another NB2 node can't overwrite it
   setSocketImage(this.getInputData(1) || null)
+  // Re-send this node's own model choice and settings right now. Every model node on the canvas
+  // overwrites these shared values on each tick, so without this another model node could win
+  this.onExecute()
+  // Use the text arriving on our own Prompt wire (e.g. from a Close-up node) when one is plugged in,
+  // instead of whatever the Prompt Assembler last stored. An empty wired prompt shows "No prompt yet"
+  if (this.inputs[0].link != null) setPrompt(this.getInputData(0) || '')
   await generate()
   this._status = 'idle'
   this.size = this.computeSize()

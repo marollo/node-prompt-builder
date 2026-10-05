@@ -22,6 +22,7 @@ import './nodes/ImageNode.js'
 import './nodes/ClaudeNode.js'
 import './nodes/CameraMoveNode.js'
 import './nodes/QwenMultiAngleNode.js'
+import './nodes/CloseUpNode.js'
 
 // Remove all built-in LiteGraph node types so only our custom nodes appear
 // in the search list when the user double-clicks the canvas.
