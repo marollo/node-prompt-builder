@@ -6,7 +6,7 @@
 
 import { LiteGraph } from 'litegraph.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
-import { setGenerationParams, setFormat, setResultCallback, generate } from '../api/apiClient.js'
+import { setGenerationParams, setFormat, setResultCallback, setSocketImage, generate } from '../api/apiClient.js'
 import { getStats, updateEstimate } from '../api/CostControl.js'
 import { calculateCost } from '../api/formats/falai.js'
 import {
@@ -37,6 +37,13 @@ function NB2ModelNode() {
 
   // One input slot — receives the assembled prompt string from the Prompt Assembler node
   this.addInput('Prompt', 'string')
+
+  // Second input slot — an optional picture from another node (e.g. another NB2 or Recraft),
+  // sent to fal.ai as an extra reference image. Must stay second: other code reads the Prompt as input 0
+  this.addInput('image', 'image')
+
+  // One output slot — sends the first generated picture to another node (e.g. Camera Move, Qwen, Claude)
+  this.addOutput('image', 'image')
 
   // No text fields — the side panel is used only for cost settings
   this.values = {}
@@ -88,6 +95,8 @@ NB2ModelNode.prototype._generate = async function () {
   // Show "Generating…" on the node until the request finishes (or is blocked)
   this._status = 'generating'
   this.size = this.computeSize()
+  // Hand over the connected picture only now, at click time, so another NB2 node can't overwrite it
+  setSocketImage(this.getInputData(1) || null)
   await generate()
   this._status = 'idle'
   this.size = this.computeSize()
@@ -189,6 +198,9 @@ NB2ModelNode.prototype.onExecute = function () {
 
   // Grey out Aspect Ratio when an Ad Format node upstream is controlling it
   this._aspectRatio.disabled = this._isAspectRatioOverridden()
+
+  // Send the first generated picture out of the output socket (nothing until a generation has run)
+  this.setOutputData(0, this._lastImages[0] || null)
 
   // Mark node as needing a canvas redraw so the stats stay current
   this.setDirtyCanvas(true)
@@ -300,6 +312,10 @@ NB2ModelNode.prototype.onSerialize = function (info) {
  */
 NB2ModelNode.prototype.onConfigure = function (info) {
   if (info.extra) this._lastImages = info.extra.lastImages || []
+  // Graphs saved before the output socket existed have no outputs — add it back so they get it too
+  if (!this.outputs || this.outputs.length === 0) this.addOutput('image', 'image')
+  // Same for the image input: older saves only have the Prompt input, so add the second one
+  if (this.inputs.length < 2) this.addInput('image', 'image')
   // Rebuild the thumbnails so the last result is visible again after a reload
   this._showThumbnails()
 }

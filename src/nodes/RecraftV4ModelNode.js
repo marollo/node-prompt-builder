@@ -27,6 +27,9 @@ function RecraftV4ModelNode() {
   // One input slot — receives the assembled prompt string from the Prompt Assembler node
   this.addInput('Prompt', 'string')
 
+  // One output slot — sends the first generated picture to another node (e.g. Camera Move, Qwen, NB2)
+  this.addOutput('image', 'image')
+
   // No side-panel text fields — panel is used only for cost settings
   this.values = {}
   this.panelFields = []
@@ -206,6 +209,9 @@ RecraftV4ModelNode.prototype.onExecute = function () {
   // Check whether any upstream content node has reference images
   this._hasReferenceImages = this._collectReferenceImages()
 
+  // Send the first generated picture out of the output socket (nothing until a generation has run)
+  this.setOutputData(0, this._lastImages[0] || null)
+
   // Mark node as needing a canvas redraw so stats and warning stay current
   this.setDirtyCanvas(true)
 }
@@ -293,6 +299,8 @@ RecraftV4ModelNode.prototype.onSerialize = function (info) {
  */
 RecraftV4ModelNode.prototype.onConfigure = function (info) {
   if (info.extra) this._lastImages = info.extra.lastImages || []
+  // Graphs saved before the output socket existed have no outputs — add it back so they get it too
+  if (!this.outputs || this.outputs.length === 0) this.addOutput('image', 'image')
   // Rebuild the thumbnail so the last result is visible again after a reload
   this._showThumbnails()
 }

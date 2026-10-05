@@ -73,7 +73,9 @@ ClaudeNode.prototype._describe = async function () {
     if (link) {
       const src = this.graph.getNodeById(link.origin_id)
       if (src) {
-        imageData = src.imageData || src._outputImageData || null
+        // Image node keeps its picture in imageData, Camera Move in _outputImageData,
+        // and NB2 / Recraft / Qwen keep a list in _lastImages (we take the first one)
+        imageData = src.imageData || src._outputImageData || (src._lastImages && src._lastImages[0]) || null
       }
     }
   }

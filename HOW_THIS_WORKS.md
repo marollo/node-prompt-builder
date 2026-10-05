@@ -10,6 +10,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - One node appears on the canvas at startup: **Prompt Assembler** — the user adds whichever model node they need from the search list
 - Thirteen node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, NB2 Model, Recraft V4 Pro, Claude, Camera Move, Qwen Multi-Angle, Image — LiteGraph's built-in nodes are hidden
 - Standard flow: content nodes → Prompt Assembler → NB2 Model (or Recraft V4 Pro) → API → image modal
+- Chained flow: NB2 Model / Recraft V4 Pro **image** output → Camera Move, Qwen Multi-Angle, Claude, or another NB2 Model's **image** input (the first generated picture is passed along)
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
 
 **Prompt Assembler node**
@@ -19,7 +20,9 @@ This document is a plain English map of the codebase. It is updated after every 
 - "Copy Prompt" button copies to clipboard
 
 **NB2 Model node**
-- Has one input slot that receives the prompt string from the Prompt Assembler
+- Has two input slots: **Prompt** (the prompt string from the Prompt Assembler) and **image** (optional — a picture from another node, e.g. another NB2 or Recraft). The image input must stay second, because the Ad Format checks read the Prompt as input 0
+- When something is plugged into the **image** input, that picture is handed to `apiClient.js` (`setSocketImage`) at the moment Generate is clicked, and is sent to fal.ai as an extra reference image (label "connected image") — which automatically switches NB2 to its `/edit` endpoint, the same way uploaded reference images do (backlog #8)
+- Has one output slot (**image**) that sends the **first** generated picture to any node with an image input — Camera Move, Qwen Multi-Angle, Claude, or another NB2. Only the first picture is sent because every receiving node accepts a single image (backlog #8)
 - Canvas widgets: Aspect Ratio, Images, Output Format, Resolution, Safety
 - The Aspect Ratio widget is automatically disabled (greyed out, unclickable) when an Ad Format node is connected upstream with at least one format selected — because the ratio is then controlled per-format during batch generation
 - "Generate" button triggers image generation
@@ -39,7 +42,8 @@ This document is a plain English map of the codebase. It is updated after every 
 - Clears its format list from `apiClient.js` when removed from the canvas
 
 **Recraft V4 Pro node**
-- Has one input slot that receives the prompt string from the Prompt Assembler
+- Has one input slot that receives the prompt string from the Prompt Assembler. It has **no image input**: the `text-to-image` endpoint it uses cannot accept a picture (a backlog task tracks researching a Recraft image-to-image endpoint)
+- Has one output slot (**image**) that sends the **first** generated picture to any node with an image input — Camera Move, Qwen Multi-Angle, Claude, or NB2 (backlog #8)
 - Canvas widgets: Image Size (6 named options), Safety Checker (on/off)
 - "Generate" button triggers image generation via the `fal-ai/recraft/v4/pro/text-to-image` endpoint
 - "Cost Settings" button opens the side panel with Budget and Cooldown inputs

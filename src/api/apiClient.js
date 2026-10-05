@@ -24,6 +24,9 @@ let _generationParams = {}
 // Latest reference images collected from all connected nodes
 let _referenceImages = []
 
+// Picture plugged into the NB2 node's "image" socket (base64), or null when nothing is connected
+let _socketImage = null
+
 // Which model/format is active — set by the model node on every tick
 let _format = 'Nano Banana 2'
 
@@ -60,6 +63,23 @@ function setGenerationParams(params) {
  */
 function setReferenceImages(images) {
   _referenceImages = images
+}
+
+/**
+ * Stores the picture connected to the NB2 node's "image" socket (or null for none).
+ * Called by the NB2 node right before it generates, so the picture is sent as an extra reference.
+ */
+function setSocketImage(data) {
+  _socketImage = data || null
+}
+
+/**
+ * Returns every reference picture to send: those uploaded on content nodes plus the socket picture.
+ * Exists so the single and batch generation paths both send exactly the same list.
+ */
+function _allReferenceImages() {
+  if (!_socketImage) return _referenceImages
+  return [..._referenceImages, { data: _socketImage, label: 'connected image' }]
 }
 
 /**
@@ -162,7 +182,7 @@ async function _generateSingle() {
   // Pick the right formatter based on which model node is active
   let requestData
   if (_format === 'Nano Banana 2') {
-    requestData = buildFalaiRequest(_currentPrompt, settings, _generationParams, getMode(), getAnchorImageUrl(), _referenceImages)
+    requestData = buildFalaiRequest(_currentPrompt, settings, _generationParams, getMode(), getAnchorImageUrl(), _allReferenceImages())
   } else if (_format === 'Recraft V4') {
     requestData = buildRecraftRequest(_currentPrompt, settings, _generationParams)
   } else {
@@ -232,7 +252,7 @@ async function _generateBatch() {
     const params = { ..._generationParams, aspectRatio: format.formatRatio }
     const settings = { url: '', apiKey: getFalaiApiKey() }
     const { url, options } = buildFalaiRequest(
-      _currentPrompt, settings, params, getMode(), getAnchorImageUrl(), _referenceImages
+      _currentPrompt, settings, params, getMode(), getAnchorImageUrl(), _allReferenceImages()
     )
 
     try {
@@ -269,4 +289,4 @@ async function _generateBatch() {
 }
 
 // getFalaiApiKey is also used by model nodes that call fal.ai on their own (e.g. Qwen Multi-Angle)
-export { setPrompt, setGenerationParams, setReferenceImages, setFormat, setSelectedFormats, setResultCallback, generate, getFalaiApiKey }
+export { setPrompt, setGenerationParams, setReferenceImages, setSocketImage, setFormat, setSelectedFormats, setResultCallback, generate, getFalaiApiKey }
