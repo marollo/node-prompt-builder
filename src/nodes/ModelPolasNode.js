@@ -23,25 +23,28 @@ const MARGIN = 8
 // Height in pixels of the "Est: ~$0.40" line drawn under the buttons
 const EST_H = 22
 
-// The same black outfit is named in every full-body pose so all three body shots match.
+// The outfit for all five pictures, so the whole set matches — face close-ups included.
 // Swimwear, not underwear: "wearing only a tight black bra and briefs" was refused by fal.ai's content checker.
-// Worded neutrally so it fits any model — the model picks the right style (e.g. two-piece or trunks) for the person
-const OUTFIT = 'wearing simple plain black fitted swimwear suited to the person, barefoot'
+// Worded neutrally so it fits any model — the model picks the right style (e.g. two-piece or trunks) for the person.
+// "Not the clothes from the reference image" is needed: without it the face close-ups kept the original clothes
+const OUTFIT = 'The person is wearing simple plain black fitted swimwear suited to the person, barefoot, ' +
+  'not the clothes from the reference image.'
 
 // Added to every pose so the person stays the same and the pictures look like plain, honest photos.
 // The words "polaroid" / "polas" are left out on purpose: they made the model copy the look of an
 // instant photo (white frame, faded colours) instead of making a clean photograph
-const POLA_STYLE = 'Same person as in the reference image: same identity, face, body shape, skin and hair colour. ' +
+const POLA_STYLE = `${OUTFIT} Same person as in the reference image: same identity, face, body shape, skin and hair colour. ` +
   'Plain light-grey studio background, soft natural daylight. Clean, sharp, realistic digital photograph, ' +
   'true-to-life colours, unretouched, no filters, no frame or border.'
 
-// The five pictures to make — label (shown in the viewer and file names) + the pose instruction
+// The five pictures to make — label (shown in the viewer and file names) + the pose instruction.
+// The outfit is not repeated here: it comes from POLA_STYLE, which is added to every pose
 const POSES = [
-  { label: 'Full body', prompt: `Full-body front view of the person standing straight, arms relaxed at the sides, head to toe in frame, ${OUTFIT}.` },
+  { label: 'Full body', prompt: 'Full-body front view of the person standing straight, arms relaxed at the sides, head to toe in frame.' },
   { label: 'Face front', prompt: 'Frontal head-and-shoulders close-up of the person looking straight at the camera, neutral expression, no makeup, hair natural and unstyled.' },
-  { label: 'Face side', prompt: 'Side profile close-up of the person\'s head and face at 90 degrees, neutral expression, no makeup, hair natural and unstyled.' },
-  { label: 'Back', prompt: `Full-body back view of the person seen entirely from behind, standing straight, arms relaxed, head to toe in frame, ${OUTFIT}.` },
-  { label: 'Side', prompt: `Full-body side profile view of the person standing straight at 90 degrees to the camera, arms relaxed, head to toe in frame, ${OUTFIT}.` },
+  { label: 'Face side', prompt: 'Side profile head-and-shoulders close-up of the person at 90 degrees, neutral expression, no makeup, hair natural and unstyled.' },
+  { label: 'Back', prompt: 'Full-body back view of the person seen entirely from behind, standing straight, arms relaxed, head to toe in frame.' },
+  { label: 'Side', prompt: 'Full-body side profile view of the person standing straight at 90 degrees to the camera, arms relaxed, head to toe in frame.' },
 ]
 
 // ─── Node class ────────────────────────────────────────────────────────────────
