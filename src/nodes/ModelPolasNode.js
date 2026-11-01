@@ -23,8 +23,9 @@ const MARGIN = 8
 // Height in pixels of the "Est: ~$0.40" line drawn under the buttons
 const EST_H = 22
 
-// The same black outfit is named in every full-body pose so all three body shots match
-const OUTFIT = 'wearing only a simple plain tight black bra and plain black briefs, barefoot'
+// The same black outfit is named in every full-body pose so all three body shots match.
+// Swimwear, not underwear: "wearing only a tight black bra and briefs" was refused by fal.ai's content checker
+const OUTFIT = 'wearing a simple plain black two-piece swimsuit (bikini), barefoot'
 
 // Added to every pose so the person stays the same and the pictures look like real agency polas
 const POLA_STYLE = 'Same person as in the reference image: same identity, face, body shape, skin and hair colour. ' +
