@@ -24,8 +24,9 @@ const MARGIN = 8
 const EST_H = 22
 
 // The same black outfit is named in every full-body pose so all three body shots match.
-// Swimwear, not underwear: "wearing only a tight black bra and briefs" was refused by fal.ai's content checker
-const OUTFIT = 'wearing a simple plain black two-piece swimsuit (bikini), barefoot'
+// Swimwear, not underwear: "wearing only a tight black bra and briefs" was refused by fal.ai's content checker.
+// Worded neutrally so it fits any model — the model picks the right style (e.g. two-piece or trunks) for the person
+const OUTFIT = 'wearing simple plain black fitted swimwear suited to the person, barefoot'
 
 // Added to every pose so the person stays the same and the pictures look like real agency polas
 const POLA_STYLE = 'Same person as in the reference image: same identity, face, body shape, skin and hair colour. ' +
