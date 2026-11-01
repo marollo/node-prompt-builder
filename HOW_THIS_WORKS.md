@@ -8,11 +8,12 @@ This document is a plain English map of the codebase. It is updated after every 
 
 - A dark LiteGraph canvas fills the full browser window
 - One node appears on the canvas at startup: **Prompt Assembler** — the user adds whichever model node they need from the search list
-- Fifteen node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, Close-up, Skin, NB2 Model, Recraft V4 Pro, Claude, Camera Move, Qwen Multi-Angle, Image — LiteGraph's built-in nodes are hidden
+- Sixteen node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, Close-up, Skin, Model Polas, NB2 Model, Recraft V4 Pro, Claude, Camera Move, Qwen Multi-Angle, Image — LiteGraph's built-in nodes are hidden
 - Standard flow: content nodes → Prompt Assembler → NB2 Model (or Recraft V4 Pro) → API → image modal
 - Chained flow: NB2 Model / Recraft V4 Pro **image** output → Camera Move, Qwen Multi-Angle, Claude, or another NB2 Model's **image** input (the first generated picture is passed along)
 - Close-up flow: NB2 Model **image** → Close-up → its **Prompt** and **image** outputs → another NB2 Model (or only **Prompt** → Recraft V4 Pro, which takes no picture)
 - Skin flow: Image (or NB2 Model **image**) → Skin → its **Prompt** and **image** outputs → NB2 Model's **Prompt** and **image** inputs
+- Model Polas flow: Image (or any **image** output) → Model Polas → five pictures on the node; its **image** output passes the first one on
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
 
 **Prompt Assembler node**
@@ -105,6 +106,15 @@ This document is a plain English map of the codebase. It is updated after every 
 - All dropdowns on Keep original → empty prompt → the model node shows "No prompt yet"
 - Choices are saved with the graph (`serialize_widgets = true`)
 
+**Model Polas node** *(Model category)*
+- From one picture of a model, makes the five plain pictures casting agencies ask for: **Full body**, **Face front**, **Face side**, **Back** and **Side** (backlog #13)
+- Calls fal.ai Nano Banana 2 **edit** itself (reusing `buildRequest` / `parseResponse` / `calculateCost` from `falai.js` and `getFalaiApiKey()`), with the source picture as the reference
+- Each prompt = one pose line (`POSES`) + a shared ending (`POLA_STYLE`): plain black fitted swimwear "suited to the person" and "not the clothes from the reference image" (`OUTFIT`), same person, light-grey studio, clean realistic photo, no frame or border. The words "polaroid" / "polas" / "digitals" are never sent to the model
+- Two rounds: Full body first; then the other four at the same time, each also given the Full body picture as a second reference, with "Match the second reference image exactly for the swimwear, lighting and skin tone." If Full body fails, the four use the source picture alone
+- On the node: **Resolution** and **Aspect Ratio** dropdowns, an estimate line (5 × NB2 price, ~$0.40 at 1K), **Generate**, **Download** (files named `pola-<pose>.png`)
+- Results show as thumbnails; clicking one opens the viewer with each picture labelled by its pose. Every picture goes to the gallery; only pictures that came back are added to Spent (`addSpent`). A refused pose is named in the log bar and the others are kept
+- The last set and its pose names are saved with the graph
+
 **Claude node** *(Model category)*
 - Takes an image as input (from an Image node or any node with an image output) and returns a text description using the Claude API
 - A "Type" dropdown lets the user pick which description style to request: Subject, Location, Camera, Lighting, or Style/Mood — each maps to one of the existing `.md` system prompt files
@@ -196,6 +206,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   ├── CameraMoveNode.js         ← Model category node — applies virtual camera orbit/zoom/tilt to an image via Replicate qwen-edit-multiangle; canvas controls + thumbnail — BUILT
 │   │   ├── CloseUpNode.js            ← Prompt category node — preset close-up prompt + "Close-up on" text field; passes its input picture through — BUILT
 │   │   ├── SkinNode.js               ← Prompt category node — skin colour / age / spots dropdowns build a skin-only edit prompt; passes its input picture through — BUILT
+│   │   ├── ModelPolasNode.js         ← Model category node — five casting pictures (full body, face front/side, back, side) via fal.ai NB2 edit; Full body made first and used as a second reference — BUILT
 │   │   ├── QwenMultiAngleNode.js     ← Model category node — angle/elevation/zoom camera move via fal.ai Qwen Image Edit 2511 Multiple Angles; canvas controls + thumbnail grid — BUILT
 │   │   └── ReferenceImageNode.js     ← Standalone reference image node — placeholder (not built)
 │   ├── panel/
@@ -327,6 +338,13 @@ This document is a plain English map of the codebase. It is updated after every 
 5. On success the image links are downloaded as base64, saved to the gallery, and turned into thumbnails with `loadThumbnails()`
 6. Once the pictures have loaded their real size is known, so `calculateCost()` works out the price, `addSpent()` adds it to the session total, and the log bar shows cost and seed
 7. On failure the log bar shows fal.ai's own explanation and the node shows "Error — check the log bar."
+
+### When the user clicks Generate on the Model Polas node
+1. `_generate()` stops if a set is already being made, if no picture is connected, or if there is no fal.ai key (message in the log bar)
+2. Round 1: `_generatePose()` sends the Full body prompt with the source picture to NB2 `/edit`. The node shows "Generating full body (1 of 5)…"
+3. Round 2: the other four are sent at the same time (`Promise.allSettled`), each with the source picture **and** the Full body result, plus the "match the second reference image" sentence. The node shows "Generating the other 4…"
+4. Each finished picture is downloaded as base64 (fal.ai links are temporary), saved to the gallery and labelled with its pose; failures are logged one by one
+5. The cost of the pictures that came back is added with `addSpent`, and the thumbnails are drawn at the bottom of the node
 
 ### How the cooldown timer works
 
