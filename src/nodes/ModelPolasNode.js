@@ -144,7 +144,8 @@ ModelPolasNode.prototype.onDrawForeground = function (ctx) {
 
   if (this._status === 'generating') {
     ctx.fillStyle = '#666'
-    ctx.fillText('Generating 5 polas…', w / 2, areaY + 14)
+    // Says which round is running, so the user knows why it takes about twice as long
+    ctx.fillText(this._statusText || 'Generating…', w / 2, areaY + 14)
   } else if (this._status === 'error') {
     ctx.fillStyle = '#c0392b'
     ctx.fillText('Error — check the log bar.', w / 2, areaY + 14)
@@ -179,10 +180,18 @@ ModelPolasNode.prototype.onExecute = function () {
  * Sends one fal.ai request for one pose and returns the finished picture as base64.
  * Throws an error with fal.ai's own explanation when the request is refused.
  */
-ModelPolasNode.prototype._generatePose = async function (pose, imageData, apiKey) {
+ModelPolasNode.prototype._generatePose = async function (pose, imageData, apiKey, fullBodyData) {
   const params = { aspectRatio: this._aspectRatio.value, numImages: 1, outputFormat: 'png', resolution: this._resolution.value }
   // Passing the model's picture as a reference makes buildRequest use NB2's /edit endpoint
-  const { url, options } = buildRequest(`${pose.prompt} ${POLA_STYLE}`, { apiKey }, params, null, null, [{ data: imageData, label: 'Model picture' }])
+  const refs = [{ data: imageData, label: 'Model picture' }]
+  let prompt = `${pose.prompt} ${POLA_STYLE}`
+  // When the Full body picture is ready, send it as a second reference so this pose copies its
+  // swimwear, light and skin tone exactly — and say so in the prompt, or the model may ignore it
+  if (fullBodyData) {
+    refs.push({ data: fullBodyData, label: 'Full body result' })
+    prompt += ' Match the second reference image exactly for the swimwear, lighting and skin tone.'
+  }
+  const { url, options } = buildRequest(prompt, { apiKey }, params, null, null, refs)
   const response = await fetch(url, options)
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
@@ -197,8 +206,9 @@ ModelPolasNode.prototype._generatePose = async function (pose, imageData, apiKey
 }
 
 /**
- * Makes all five polas at once, then shows, stores and prices the ones that succeeded.
- * One failed pose (e.g. refused by the safety filter) does not cancel the other four.
+ * Makes the five polas in two rounds: first the Full body picture, then the other four at once,
+ * each also given the Full body picture so the whole set matches. Then shows, stores and prices them.
+ * One failed pose does not cancel the others; if Full body fails, the four use the source picture alone.
  */
 ModelPolasNode.prototype._generate = async function () {
   // Ignore extra clicks while a set is already being made, so it is not paid for twice
@@ -209,8 +219,18 @@ ModelPolasNode.prototype._generate = async function () {
   if (!apiKey) return log('Model Polas: enter your fal.ai API key in Settings.', 'error')
 
   this._setStatus('generating')
-  // allSettled waits for all five and reports each one as succeeded or failed, instead of stopping at the first error
-  const results = await Promise.allSettled(POSES.map(p => this._generatePose(p, imageData, apiKey)))
+  // Round 1 — the Full body picture (first in POSES), which the other four will copy.
+  // allSettled reports success or failure instead of stopping the whole set at the first error
+  this._statusText = 'Generating full body (1 of 5)…'
+  const [first] = await Promise.allSettled([this._generatePose(POSES[0], imageData, apiKey)])
+  const fullBody = first.status === 'fulfilled' ? first.value : null
+  if (!fullBody) log('Model Polas: the other pictures will use only the source picture, as "Full body" failed.', 'error')
+
+  // Round 2 — the other four at the same time, each given the Full body picture when there is one
+  this._statusText = 'Generating the other 4…'
+  this.setDirtyCanvas(true, true)
+  const rest = await Promise.allSettled(POSES.slice(1).map(p => this._generatePose(p, imageData, apiKey, fullBody)))
+  const results = [first, ...rest]
 
   const images = [], labels = []
   results.forEach((r, i) => {
