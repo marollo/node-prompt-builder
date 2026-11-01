@@ -1,6 +1,6 @@
 /**
- * Defines the Model Polas node — takes one picture of a model and makes the five plain
- * "agency polaroid" pictures casting agencies ask for: full body in simple black underwear,
+ * Defines the Model Polas node — takes one picture of a model and makes the five plain,
+ * natural pictures casting agencies ask for ("polas"): full body in simple black swimwear,
  * front face, side face, full back and full side.
  * One click on Generate sends five Nano Banana 2 edit requests to fal.ai at the same time,
  * each with the model's picture and one preset pose instruction.
@@ -28,9 +28,12 @@ const EST_H = 22
 // Worded neutrally so it fits any model — the model picks the right style (e.g. two-piece or trunks) for the person
 const OUTFIT = 'wearing simple plain black fitted swimwear suited to the person, barefoot'
 
-// Added to every pose so the person stays the same and the pictures look like real agency polas
+// Added to every pose so the person stays the same and the pictures look like plain, honest photos.
+// The words "polaroid" / "polas" are left out on purpose: they made the model copy the look of an
+// instant photo (white frame, faded colours) instead of making a clean photograph
 const POLA_STYLE = 'Same person as in the reference image: same identity, face, body shape, skin and hair colour. ' +
-  'Plain light-grey studio background, soft natural daylight, unretouched, realistic agency polaroid (model digitals).'
+  'Plain light-grey studio background, soft natural daylight. Clean, sharp, realistic digital photograph, ' +
+  'true-to-life colours, unretouched, no filters, no frame or border.'
 
 // The five pictures to make — label (shown in the viewer and file names) + the pose instruction
 const POSES = [
