@@ -286,6 +286,7 @@ Build and verify each step in the browser before moving to the next:
 55. ✅ Qwen Multi-Angle node — `src/nodes/QwenMultiAngleNode.js` + `src/api/formats/qwenMultiAngle.js`; on-canvas Angle/Elevation/Zoom, full Settings panel (`buildQwenMultiAngleSection` in `PropertiesPanel.js`), seed chaining, $0.035/MP cost via `addSpent`, `getFalaiApiKey` exported from `apiClient.js` (backlog #6)
 56. ✅ Close-up node — `src/nodes/CloseUpNode.js`; preset close-up prompt + on-node "Close-up on" text field, image passed through to a second output; NB2 / Recraft now use their own Prompt wire and re-apply their own settings in `_generate()`; `generate()` in `apiClient.js` freezes the prompt at click time (backlog #10)
 57. ✅ Image output on NB2 and Recraft — `NB2ModelNode.js` and `RecraftV4ModelNode.js` send their first generated picture out of a new `image` output socket; NB2 also gets an `image` input sent to fal.ai as a reference (switches to `/edit`); Recraft gets no input (text-to-image only, see backlog #9); older saved graphs gain the sockets in `onConfigure` (backlog #8)
+58. ✅ Skin node — `src/nodes/SkinNode.js`; on-node Skin colour / Age / Spots dropdowns build a skin-only edit prompt (`AGE_SKIN` describes age as skin texture, hair protected by name), image passed through to a second output (backlog #11)
 
 ---
 

@@ -8,10 +8,11 @@ This document is a plain English map of the codebase. It is updated after every 
 
 - A dark LiteGraph canvas fills the full browser window
 - One node appears on the canvas at startup: **Prompt Assembler** — the user adds whichever model node they need from the search list
-- Fourteen node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, Close-up, NB2 Model, Recraft V4 Pro, Claude, Camera Move, Qwen Multi-Angle, Image — LiteGraph's built-in nodes are hidden
+- Fifteen node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, Close-up, Skin, NB2 Model, Recraft V4 Pro, Claude, Camera Move, Qwen Multi-Angle, Image — LiteGraph's built-in nodes are hidden
 - Standard flow: content nodes → Prompt Assembler → NB2 Model (or Recraft V4 Pro) → API → image modal
 - Chained flow: NB2 Model / Recraft V4 Pro **image** output → Camera Move, Qwen Multi-Angle, Claude, or another NB2 Model's **image** input (the first generated picture is passed along)
 - Close-up flow: NB2 Model **image** → Close-up → its **Prompt** and **image** outputs → another NB2 Model (or only **Prompt** → Recraft V4 Pro, which takes no picture)
+- Skin flow: Image (or NB2 Model **image**) → Skin → its **Prompt** and **image** outputs → NB2 Model's **Prompt** and **image** inputs
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
 
 **Prompt Assembler node**
@@ -94,6 +95,15 @@ This document is a plain English map of the codebase. It is updated after every 
 - One **image** input and two outputs: **Prompt** (the finished sentence) and **image** (the incoming picture passed straight through, untouched). Wire both into NB2's two inputs, so NB2 receives the instruction and the picture to zoom into
 - With an empty text field the Prompt output is empty, and the model node shows "No prompt yet" instead of generating
 - The text is saved with the graph (`serialize_widgets = true`)
+
+**Skin node** *(Prompt category)*
+- Changes only the skin of the person in a picture: colour, apparent age and skin marks (backlog #11)
+- Three dropdowns drawn on the node: **Skin colour** (Very fair … Deep), **Age** (20s … 70s+) and **Spots** (clear skin, freckles, moles, age spots, light acne). Each starts at **Keep original**, which adds nothing to the prompt
+- Builds the prompt *"Change ONLY the skin of the person in the reference image: [chosen changes]. Do not change the hair in any way … Keep the same face, identity, pose, outfit, lighting and background. Realistic natural skin texture."*
+- Each Age choice is written as a description of the skin only (`AGE_SKIN` in `SkinNode.js`, e.g. 60s → "mature skin with wrinkles around the eyes, forehead and mouth, slightly less firm"), never "a person in their 60s" — that wording made the model grey the hair too
+- Same sockets as Close-up: one **image** input; outputs **Prompt** and **image** (passed straight through). Wire both into NB2
+- All dropdowns on Keep original → empty prompt → the model node shows "No prompt yet"
+- Choices are saved with the graph (`serialize_widgets = true`)
 
 **Claude node** *(Model category)*
 - Takes an image as input (from an Image node or any node with an image output) and returns a text description using the Claude API
@@ -185,6 +195,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   ├── ClaudeNode.js             ← Model category node — image-to-text via Claude API; dropdown selects description type; output wires into Prompt Assembler — BUILT
 │   │   ├── CameraMoveNode.js         ← Model category node — applies virtual camera orbit/zoom/tilt to an image via Replicate qwen-edit-multiangle; canvas controls + thumbnail — BUILT
 │   │   ├── CloseUpNode.js            ← Prompt category node — preset close-up prompt + "Close-up on" text field; passes its input picture through — BUILT
+│   │   ├── SkinNode.js               ← Prompt category node — skin colour / age / spots dropdowns build a skin-only edit prompt; passes its input picture through — BUILT
 │   │   ├── QwenMultiAngleNode.js     ← Model category node — angle/elevation/zoom camera move via fal.ai Qwen Image Edit 2511 Multiple Angles; canvas controls + thumbnail grid — BUILT
 │   │   └── ReferenceImageNode.js     ← Standalone reference image node — placeholder (not built)
 │   ├── panel/
