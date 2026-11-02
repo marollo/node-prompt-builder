@@ -44,14 +44,27 @@ const POLA_STYLE = 'Same person as in the reference image: same identity, face, 
   'edge or horizon line, evenly lit so the background looks endless. Soft natural daylight. Clean, sharp, realistic digital photograph, ' +
   'true-to-life colours, unretouched, no filters, no frame or border.'
 
+// Fixed camera set-ups, so every run frames the pictures the same way (backlog #18).
+// Without them the model chose its own crop, distance and camera height each time.
+// One set-up is shared by the three full-body pictures, the other by the two face close-ups
+const FULL_BODY_FRAMING = 'Camera: 50mm lens at waist height, pointing straight at the person, no tilt. ' +
+  'The person is centred, standing on the floor, the whole body from the top of the head to the feet in frame, ' +
+  'a small even gap above the head and the feet just above the bottom edge.'
+const PORTRAIT_FRAMING = 'Camera: 85mm lens at eye level, pointing straight at the head, no tilt. ' +
+  'Tight crop from just above the top of the head down to the collarbones, head centred and filling most of the frame.'
+
+// Said in both face close-ups, so the face looks the same in each
+const FACE_NATURAL = 'Neutral relaxed expression, mouth closed, no makeup, hair natural and unstyled.'
+
 // The five pictures to make — label (shown in the viewer and file names) + the pose instruction.
+// Each pose names an exact angle; both side views face LEFT so the two profiles always match.
 // The outfit is not repeated here: _generatePose adds the chosen gender's swimwear to every pose
 const POSES = [
-  { label: 'Full body', prompt: 'Full-body front view of the person standing straight, arms relaxed at the sides, head to toe in frame.' },
-  { label: 'Face front', prompt: 'Frontal head-and-shoulders close-up of the person looking straight at the camera, neutral expression, no makeup, hair natural and unstyled.' },
-  { label: 'Face side', prompt: 'Side profile head-and-shoulders close-up of the person at 90 degrees, neutral expression, no makeup, hair natural and unstyled.' },
-  { label: 'Back', prompt: 'Full-body back view of the person seen entirely from behind, standing straight, arms relaxed, head to toe in frame.' },
-  { label: 'Side', prompt: 'Full-body side profile view of the person standing straight at 90 degrees to the camera, arms relaxed, head to toe in frame.' },
+  { label: 'Full body', prompt: `Full-body front view: the person faces the camera squarely, standing straight, feet hip-width apart, arms relaxed at the sides. ${FULL_BODY_FRAMING}` },
+  { label: 'Face front', prompt: `Frontal head-and-shoulders close-up: the person faces the camera squarely and looks straight into the lens. ${FACE_NATURAL} ${PORTRAIT_FRAMING}` },
+  { label: 'Face side', prompt: `Side profile head-and-shoulders close-up: the head is turned exactly 90 degrees, facing the left edge of the picture, only one eye visible. ${FACE_NATURAL} ${PORTRAIT_FRAMING}` },
+  { label: 'Back', prompt: `Full-body back view: the person is seen entirely from behind, standing straight, feet hip-width apart, arms relaxed at the sides. ${FULL_BODY_FRAMING}` },
+  { label: 'Side', prompt: `Full-body side profile view: the whole body is turned exactly 90 degrees, facing the left edge of the picture, standing straight, arms relaxed at the sides. ${FULL_BODY_FRAMING}` },
 ]
 
 // ─── Node class ────────────────────────────────────────────────────────────────
@@ -67,7 +80,9 @@ function ModelPolasNode() {
 
   // Settings shared by all five requests; saved with the graph (serialize_widgets below)
   this._resolution  = this.addWidget('combo', 'Resolution',   '1K',   null, { values: FALAI_RESOLUTION })
-  this._aspectRatio = this.addWidget('combo', 'Aspect Ratio', 'auto', null, { values: FALAI_ASPECT_RATIO })
+  // Starts on 3:4 portrait, not "auto": "auto" copies the reference picture's shape, so a wide
+  // reference gave wide polas and the crop changed from run to run (backlog #18)
+  this._aspectRatio = this.addWidget('combo', 'Aspect Ratio', '3:4', null, { values: FALAI_ASPECT_RATIO })
   // Starts on "Choose…" so the user must say whether the person is female or male (decides the swimwear)
   this._gender      = this.addWidget('combo', 'Gender',       CHOOSE, null, { values: GENDERS })
   this.serialize_widgets = true

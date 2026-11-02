@@ -15,3 +15,6 @@ id,title,status,priority,notes
 14,Add View prompt button to all model nodes,Backlog,Medium,I want to get a read-only preview of the prompt that is going to be sent to the model to generate a picture.
 15,Add option to select the model type for Model Polas,Backlog,Low,I want the user to be able to select which model to use to create the pictures.
 16,Add gender selection to Model Polas node,Done,High,"The user must specify whether the person in the reference picture is female or male, so the model shows the right swimwear."
+17,Add new node: Head Hair,Backlog,Medium,"The node contains options for hair style, colour and length. Provide a pre-selected list of choices for each option."
+18,Update Model Polas node prompts for consistent framing,Backlog,High,"I would like more consistency for the side full-body, front portrait and side portrait polas. Right now each run generates slightly different camera framing."
+19,Add new node: Try-on,Backlog,High,"The node has two inputs: one to connect a node with one or more images of the character, and one to connect a node with one or more images of the clothes to try on."
