@@ -288,6 +288,7 @@ Build and verify each step in the browser before moving to the next:
 57. ✅ Image output on NB2 and Recraft — `NB2ModelNode.js` and `RecraftV4ModelNode.js` send their first generated picture out of a new `image` output socket; NB2 also gets an `image` input sent to fal.ai as a reference (switches to `/edit`); Recraft gets no input (text-to-image only, see backlog #9); older saved graphs gain the sockets in `onConfigure` (backlog #8)
 58. ✅ Skin node — `src/nodes/SkinNode.js`; on-node Skin colour / Age / Spots dropdowns build a skin-only edit prompt (`AGE_SKIN` describes age as skin texture, hair protected by name), image passed through to a second output (backlog #11)
 59. ✅ Model Polas node — `src/nodes/ModelPolasNode.js`; five casting pictures (Full body, Face front, Face side, Back, Side) via fal.ai NB2 edit, reusing `falai.js`; shared prompt ending `POLA_STYLE` with neutral swimwear `OUTFIT`; Full body made first and sent as a second reference to the other four; per-pose errors, gallery, `addSpent`, Download, saved with the graph (backlog #13)
+60. ✅ Model Polas Gender dropdown — Female / Male picks the swimwear (`OUTFITS`); Generate blocked until chosen (backlog #16). Background changed to a seamless infinity cove with no floor-to-wall corner
 
 ---
 

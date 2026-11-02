@@ -109,9 +109,9 @@ This document is a plain English map of the codebase. It is updated after every 
 **Model Polas node** *(Model category)*
 - From one picture of a model, makes the five plain pictures casting agencies ask for: **Full body**, **Face front**, **Face side**, **Back** and **Side** (backlog #13)
 - Calls fal.ai Nano Banana 2 **edit** itself (reusing `buildRequest` / `parseResponse` / `calculateCost` from `falai.js` and `getFalaiApiKey()`), with the source picture as the reference
-- Each prompt = one pose line (`POSES`) + a shared ending (`POLA_STYLE`): plain black fitted swimwear "suited to the person" and "not the clothes from the reference image" (`OUTFIT`), same person, light-grey studio, clean realistic photo, no frame or border. The words "polaroid" / "polas" / "digitals" are never sent to the model
+- Each prompt = one pose line (`POSES`) + an outfit sentence + a shared ending (`POLA_STYLE`). The outfit comes from the **Gender** dropdown (`OUTFITS`: Female = plain black fitted two-piece swimsuit, Male = plain black fitted swim trunks), barefoot, "not the clothes from the reference image" (backlog #16). The ending asks for the same person, a seamless light-grey **infinity cove** background (floor curving into the wall, no visible corner, so it looks endless), soft daylight, clean realistic photo, no frame or border. The words "polaroid" / "polas" / "digitals" are never sent to the model
 - Two rounds: Full body first; then the other four at the same time, each also given the Full body picture as a second reference, with "Match the second reference image exactly for the swimwear, lighting and skin tone." If Full body fails, the four use the source picture alone
-- On the node: **Resolution** and **Aspect Ratio** dropdowns, an estimate line (5 × NB2 price, ~$0.40 at 1K), **Generate**, **Download** (files named `pola-<pose>.png`)
+- On the node: **Resolution**, **Aspect Ratio** and **Gender** dropdowns (Gender starts on "Choose…"), an estimate line (5 × NB2 price, ~$0.40 at 1K), **Generate**, **Download** (files named `pola-<pose>.png`)
 - Results show as thumbnails; clicking one opens the viewer with each picture labelled by its pose. Every picture goes to the gallery; only pictures that came back are added to Spent (`addSpent`). A refused pose is named in the log bar and the others are kept
 - The last set and its pose names are saved with the graph
 
@@ -340,7 +340,7 @@ This document is a plain English map of the codebase. It is updated after every 
 7. On failure the log bar shows fal.ai's own explanation and the node shows "Error — check the log bar."
 
 ### When the user clicks Generate on the Model Polas node
-1. `_generate()` stops if a set is already being made, if no picture is connected, or if there is no fal.ai key (message in the log bar)
+1. `_generate()` stops if a set is already being made, if no picture is connected, if Gender is still "Choose…", or if there is no fal.ai key (message in the log bar) — so nothing is paid for by mistake
 2. Round 1: `_generatePose()` sends the Full body prompt with the source picture to NB2 `/edit`. The node shows "Generating full body (1 of 5)…"
 3. Round 2: the other four are sent at the same time (`Promise.allSettled`), each with the source picture **and** the Full body result, plus the "match the second reference image" sentence. The node shows "Generating the other 4…"
 4. Each finished picture is downloaded as base64 (fal.ai links are temporary), saved to the gallery and labelled with its pose; failures are logged one by one

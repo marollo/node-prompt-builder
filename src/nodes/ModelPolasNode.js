@@ -36,9 +36,12 @@ const GENDERS = [CHOOSE, ...Object.keys(OUTFITS)]
 
 // Added to every pose so the person stays the same and the pictures look like plain, honest photos.
 // The words "polaroid" / "polas" are left out on purpose: they made the model copy the look of an
-// instant photo (white frame, faded colours) instead of making a clean photograph
+// instant photo (white frame, faded colours) instead of making a clean photograph.
+// The background is an "infinity cove" (a studio wall that curves into the floor), described in plain
+// words too, so no corner between floor and wall shows and the background looks endless
 const POLA_STYLE = 'Same person as in the reference image: same identity, face, body shape, skin and hair colour. ' +
-  'Plain light-grey studio background, soft natural daylight. Clean, sharp, realistic digital photograph, ' +
+  'Seamless light-grey infinity cove background: the floor curves smoothly into the wall with no visible corner, ' +
+  'edge or horizon line, evenly lit so the background looks endless. Soft natural daylight. Clean, sharp, realistic digital photograph, ' +
   'true-to-life colours, unretouched, no filters, no frame or border.'
 
 // The five pictures to make — label (shown in the viewer and file names) + the pose instruction.
