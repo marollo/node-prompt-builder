@@ -46,11 +46,13 @@ const POLA_STYLE = 'Same person as in the reference image: same identity, face, 
 
 // Fixed camera set-ups, so every run frames the pictures the same way (backlog #18).
 // Without them the model chose its own crop, distance and camera height each time.
-// One set-up is shared by the three full-body pictures, the other by the two face close-ups
-const FULL_BODY_FRAMING = 'Camera: 50mm lens at waist height, pointing straight at the person, no tilt. ' +
+// One set-up is shared by the three full-body pictures, the other by the two face close-ups.
+// Avoid words like "pointing at the head" or "head turned 90 degrees": fal.ai's content checker
+// read them as violence or injury and refused the Face side picture (see BUGS_AND_FIXES.md)
+const FULL_BODY_FRAMING = 'Camera: 50mm lens at waist height, camera level and facing the subject, no tilt. ' +
   'The person is centred, standing on the floor, the whole body from the top of the head to the feet in frame, ' +
   'a small even gap above the head and the feet just above the bottom edge.'
-const PORTRAIT_FRAMING = 'Camera: 85mm lens at eye level, pointing straight at the head, no tilt. ' +
+const PORTRAIT_FRAMING = 'Camera: 85mm lens at eye level, camera level and facing the subject, no tilt. ' +
   'Tight crop from just above the top of the head down to the collarbones, head centred and filling most of the frame.'
 
 // Said in both face close-ups, so the face looks the same in each
@@ -62,9 +64,9 @@ const FACE_NATURAL = 'Neutral relaxed expression, mouth closed, no makeup, hair 
 const POSES = [
   { label: 'Full body', prompt: `Full-body front view: the person faces the camera squarely, standing straight, feet hip-width apart, arms relaxed at the sides. ${FULL_BODY_FRAMING}` },
   { label: 'Face front', prompt: `Frontal head-and-shoulders close-up: the person faces the camera squarely and looks straight into the lens. ${FACE_NATURAL} ${PORTRAIT_FRAMING}` },
-  { label: 'Face side', prompt: `Side profile head-and-shoulders close-up: the head is turned exactly 90 degrees, facing the left edge of the picture, only one eye visible. ${FACE_NATURAL} ${PORTRAIT_FRAMING}` },
+  { label: 'Face side', prompt: `Profile portrait, head-and-shoulders: the person faces the left edge of the picture, the face seen from the side. ${FACE_NATURAL} ${PORTRAIT_FRAMING}` },
   { label: 'Back', prompt: `Full-body back view: the person is seen entirely from behind, standing straight, feet hip-width apart, arms relaxed at the sides. ${FULL_BODY_FRAMING}` },
-  { label: 'Side', prompt: `Full-body side profile view: the whole body is turned exactly 90 degrees, facing the left edge of the picture, standing straight, arms relaxed at the sides. ${FULL_BODY_FRAMING}` },
+  { label: 'Side', prompt: `Full-body side profile view: the person stands in profile, facing the left edge of the picture, standing straight, arms relaxed at the sides. ${FULL_BODY_FRAMING}` },
 ]
 
 // ─── Node class ────────────────────────────────────────────────────────────────
