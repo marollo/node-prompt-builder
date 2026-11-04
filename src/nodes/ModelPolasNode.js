@@ -16,6 +16,7 @@ import { FALAI_ASPECT_RATIO, FALAI_RESOLUTION } from '../utils/nodeOptions.js'
 import { fetchAsBase64 } from '../utils/imageUtils.js'
 import { saveToGallery } from '../utils/galleryStore.js'
 import { loadThumbnails, thumbnailGridHeight, drawThumbnailGrid, thumbnailIndexAt } from '../utils/thumbnailUtils.js'
+import { showPromptPreview } from '../panel/PromptPreviewModal.js'
 
 // Space in pixels around the cost line and the thumbnail area
 const MARGIN = 8
@@ -98,6 +99,9 @@ function ModelPolasNode() {
   // Buttons must be plain (non-async) functions — LiteGraph ignores async ones
   this.addWidget('button', 'Generate', null, () => { this._generate() })
   this.addWidget('button', 'Download', null, () => this._download())
+  // View prompt button — shows all five prompts Generate would send (backlog #14).
+  // Added last on purpose: saved settings are matched to widgets by position
+  this.addWidget('button', 'View prompt', null, () => showPromptPreview(ModelPolasNode.title, this._previewText()))
 }
 
 ModelPolasNode.title = 'Model Polas (fal.ai)'
@@ -203,6 +207,29 @@ ModelPolasNode.prototype.onExecute = function () {
 // ─── Generate ─────────────────────────────────────────────────────────────────
 
 /**
+ * Returns the exact prompt for one pose: pose line, the chosen gender's swimwear, the shared ending,
+ * and — when the Full body picture is sent as a second reference — a sentence telling the model to copy it.
+ * Shared by _generatePose and the "View prompt" button (backlog #14), so the preview matches what is sent.
+ */
+ModelPolasNode.prototype._posePrompt = function (pose, withFullBody) {
+  const swimwear = OUTFITS[this._gender.value] || '(choose Female or Male first)'
+  // Pose line, then the swimwear for the chosen gender (same in all five pictures), then the shared ending
+  const outfit = `The person is wearing ${swimwear}, barefoot, not the clothes from the reference image.`
+  let prompt = `${pose.prompt} ${outfit} ${POLA_STYLE}`
+  // Without this sentence the model may ignore the second reference picture
+  if (withFullBody) prompt += ' Match the second reference image exactly for the swimwear, lighting and skin tone.'
+  return prompt
+}
+
+/**
+ * Builds the read-only preview of all five prompts, in the order they are sent.
+ * The last four assume Full body succeeded, which is the normal case (they then get its picture too).
+ */
+ModelPolasNode.prototype._previewText = function () {
+  return POSES.map((pose, i) => `${i + 1}. ${pose.label}\n${this._posePrompt(pose, i > 0)}`).join('\n\n')
+}
+
+/**
  * Sends one fal.ai request for one pose and returns the finished picture as base64.
  * Throws an error with fal.ai's own explanation when the request is refused.
  */
@@ -210,15 +237,9 @@ ModelPolasNode.prototype._generatePose = async function (pose, imageData, apiKey
   const params = { aspectRatio: this._aspectRatio.value, numImages: 1, outputFormat: 'png', resolution: this._resolution.value }
   // Passing the model's picture as a reference makes buildRequest use NB2's /edit endpoint
   const refs = [{ data: imageData, label: 'Model picture' }]
-  // Pose line, then the swimwear for the chosen gender (same in all five pictures), then the shared ending
-  const outfit = `The person is wearing ${OUTFITS[this._gender.value]}, barefoot, not the clothes from the reference image.`
-  let prompt = `${pose.prompt} ${outfit} ${POLA_STYLE}`
-  // When the Full body picture is ready, send it as a second reference so this pose copies its
-  // swimwear, light and skin tone exactly — and say so in the prompt, or the model may ignore it
-  if (fullBodyData) {
-    refs.push({ data: fullBodyData, label: 'Full body result' })
-    prompt += ' Match the second reference image exactly for the swimwear, lighting and skin tone.'
-  }
+  const prompt = this._posePrompt(pose, !!fullBodyData)
+  // When the Full body picture is ready, send it as a second reference so this pose copies it
+  if (fullBodyData) refs.push({ data: fullBodyData, label: 'Full body result' })
   const { url, options } = buildRequest(prompt, { apiKey }, params, null, null, refs)
   const response = await fetch(url, options)
   if (!response.ok) {

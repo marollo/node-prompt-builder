@@ -12,6 +12,7 @@ import { log } from '../panel/LogPanel.js'
 import { buildRequest, parseResponse, waitForPrediction, fetchImageAsBase64 } from '../api/formats/replicate.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
 import { saveToGallery } from '../utils/galleryStore.js'
+import { showPromptPreview } from '../panel/PromptPreviewModal.js'
 
 // Replicate model path — the owner/name slug from the model's URL
 const MODEL_PATH = 'qwen/qwen-edit-multiangle'
@@ -89,6 +90,10 @@ function CameraMoveNode() {
 
   // Download button — saves the generated image to the user's computer
   this.addWidget('button', 'Download', null, () => this._download())
+
+  // View prompt button — shows the text Generate would send (backlog #14).
+  // Added last on purpose: saved settings are matched to widgets by position
+  this.addWidget('button', 'View prompt', null, () => showPromptPreview(CameraMoveNode.title, this._previewText()))
 }
 
 CameraMoveNode.title = 'Camera Move (Replicate)'
@@ -282,6 +287,25 @@ CameraMoveNode.prototype._pickSeed = function () {
   return Math.floor(Math.random() * 2147483647)
 }
 
+// ─── Prompt text ──────────────────────────────────────────────────────────────
+
+/**
+ * Returns the text prompt sent to Replicate: the preserve-subject instruction, then the user's own text.
+ * Shared by _generate and the "View prompt" button, so the preview always matches what is sent.
+ */
+CameraMoveNode.prototype._promptText = function () {
+  return this._prompt ? PRESERVE_SUBJECT_PROMPT + ' ' + this._prompt : PRESERVE_SUBJECT_PROMPT
+}
+
+/**
+ * Builds the read-only preview: the prompt plus the camera move values.
+ * The camera values are included because they are the main instruction for this model.
+ */
+CameraMoveNode.prototype._previewText = function () {
+  return `Prompt:\n${this._promptText()}\n\n` +
+    `Camera: orbit ${Math.round(this._rotateDeg)}°, zoom ${Math.round(this._moveForwd)}, tilt ${Math.round(this._vertTilt)}`
+}
+
 // ─── _generate ────────────────────────────────────────────────────────────────
 
 /**
@@ -313,10 +337,8 @@ CameraMoveNode.prototype._generate = async function () {
   // Build the input object from camera values and all optional settings
   const inputParams = {
     image:                    imageData,
-    // Always start with the preserve instruction; add the user's own prompt after it if they typed one
-    prompt:                   this._prompt
-                                ? PRESERVE_SUBJECT_PROMPT + ' ' + this._prompt
-                                : PRESERVE_SUBJECT_PROMPT,
+    // Always starts with the preserve instruction; the user's own prompt goes after it (see _promptText)
+    prompt:                   this._promptText(),
     rotate_degrees:           Math.round(this._rotateDeg),
     move_forward:             Math.round(this._moveForwd),
     vertical_tilt:            Math.round(this._vertTilt),
@@ -477,6 +499,11 @@ CameraMoveNode.prototype.onConfigure = function (info) {
   this._outputFormat           = info.extra.outputFormat           ?? 'webp'
   this._outputQuality          = info.extra.outputQuality          ?? 95
   this._disableSafetyChecker   = info.extra.disableSafetyChecker   ?? false
+
+  // A saved node keeps the height it had when saved. If buttons were added since (e.g. "View prompt"),
+  // that height is too short and the control rows, drawn from the bottom, cover the last button.
+  // Growing to at least the needed height fixes it; the user's chosen width is left alone
+  this.size[1] = Math.max(this.size[1], this.computeSize()[1])
 
   if (info.extra.outputImageData) {
     this._outputImageData = info.extra.outputImageData
