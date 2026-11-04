@@ -813,3 +813,62 @@ html, body {
   text-align: center;
   flex-shrink: 0;
 }
+
+/* ─── Prompt preview pop-up (backlog #14) ────────────────────────────────────
+   Dark overlay with a box holding a read-only text area that shows the exact
+   prompt a model node will send. Clicking outside the box or ✕ closes it.
+   ─────────────────────────────────────────────────────────────────────────── */
+#prompt-preview-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+}
+
+#prompt-preview-box {
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  width: min(640px, 90vw);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Title on the left, close button on the right */
+#prompt-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #111;
+  border-bottom: 1px solid #333;
+  font: 600 13px sans-serif;
+  color: #e0e0e0;
+}
+
+#prompt-preview-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#prompt-preview-close:hover { color: #e0e0e0; }
+
+/* The prompt itself — read-only, scrolls when long, keeps line breaks */
+#prompt-preview-text {
+  height: min(420px, 60vh);
+  margin: 0;
+  padding: 14px;
+  border: none;
+  resize: vertical;
+  background: #1a1a1a;
+  color: #d0d0d0;
+  font: 12px/1.5 monospace;
+  white-space: pre-wrap;
+}

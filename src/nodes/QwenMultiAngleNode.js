@@ -10,6 +10,7 @@ import { LiteGraph } from 'litegraph.js'
 import { log } from '../panel/LogPanel.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
 import { showImage } from '../panel/ImageModal.js'
+import { showPromptPreview } from '../panel/PromptPreviewModal.js'
 import { getFalaiApiKey } from '../api/apiClient.js'
 import { addSpent } from '../api/CostControl.js'
 import { buildRequest, parseResponse, calculateCost } from '../api/formats/qwenMultiAngle.js'
@@ -78,6 +79,9 @@ function QwenMultiAngleNode() {
   this.addWidget('button', 'Settings', null, () => openPanel(this))
   this.addWidget('button', 'Generate', null, () => { this._generate() })
   this.addWidget('button', 'Download', null, () => this._download())
+  // View prompt button — shows the text Generate would send (backlog #14).
+  // Added last on purpose: saved settings are matched to widgets by position
+  this.addWidget('button', 'View prompt', null, () => showPromptPreview(QwenMultiAngleNode.title, this._previewText()))
 }
 
 QwenMultiAngleNode.title = 'Qwen Multi-Angle (fal.ai)'
@@ -238,6 +242,26 @@ QwenMultiAngleNode.prototype._pickSeed = function () {
   return Math.floor(Math.random() * 2147483647)
 }
 
+// ─── Prompt text ──────────────────────────────────────────────────────────────
+
+/**
+ * Returns the text prompt Qwen receives: the preserve-subject instruction, then the user's own text.
+ * Shared by _buildInput (what Generate sends) and the "View prompt" button, so both always match.
+ */
+QwenMultiAngleNode.prototype._promptText = function () {
+  return this._prompt ? PRESERVE_SUBJECT_PROMPT + ' ' + this._prompt : PRESERVE_SUBJECT_PROMPT
+}
+
+/**
+ * Builds the read-only preview: the prompt, the negative prompt and the camera values.
+ * The camera values are included because for Qwen they are the main instruction, not the text.
+ */
+QwenMultiAngleNode.prototype._previewText = function () {
+  return `Prompt:\n${this._promptText()}\n\n` +
+    `Negative prompt:\n${this._negativePrompt || '(none)'}\n\n` +
+    `Camera: angle ${this._hAngle}°, elevation ${this._vAngle}°, zoom ${this._zoom}`
+}
+
 // ─── _buildInput ──────────────────────────────────────────────────────────────
 
 /**
@@ -250,8 +274,8 @@ QwenMultiAngleNode.prototype._buildInput = function (imageData) {
     horizontal_angle:      this._hAngle,
     vertical_angle:        this._vAngle,
     zoom:                  this._zoom,
-    // Always start with the preserve instruction; the user's own text goes after it
-    additional_prompt:     this._prompt ? PRESERVE_SUBJECT_PROMPT + ' ' + this._prompt : PRESERVE_SUBJECT_PROMPT,
+    // Always starts with the preserve instruction; the user's own text goes after it (see _promptText)
+    additional_prompt:     this._promptText(),
     lora_scale:            this._loraScale,
     guidance_scale:        this._guidanceScale,
     num_inference_steps:   this._numInferenceSteps,

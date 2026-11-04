@@ -291,5 +291,13 @@ async function _generateBatch(prompt) {
   log(`Batch complete — ${results.length} of ${total} succeeded`, results.length === total ? 'success' : 'info')
 }
 
+/**
+ * Returns the prompt the Prompt Assembler last stored, without changing anything.
+ * Used by the "View prompt" button on NB2 and Recraft to preview what Generate would send.
+ */
+function getPrompt() {
+  return _currentPrompt
+}
+
 // getFalaiApiKey is also used by model nodes that call fal.ai on their own (e.g. Qwen Multi-Angle)
-export { setPrompt, setGenerationParams, setReferenceImages, setSocketImage, setFormat, setSelectedFormats, setResultCallback, generate, getFalaiApiKey }
+export { setPrompt, setGenerationParams, setReferenceImages, setSocketImage, setFormat, setSelectedFormats, setResultCallback, generate, getFalaiApiKey, getPrompt }

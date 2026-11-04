@@ -15,6 +15,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - Skin flow: Image (or NB2 Model **image**) → Skin → its **Prompt** and **image** outputs → NB2 Model's **Prompt** and **image** inputs
 - Model Polas flow: Image (or any **image** output) → Model Polas → five pictures on the node; its **image** output passes the first one on
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
+- **View prompt** (backlog #14): every model node — NB2, Recraft V4 Pro, Qwen Multi-Angle, Camera Move, Model Polas — has a **View prompt** button (the last button on the node) that opens a read-only pop-up with the exact text Generate would send. Qwen and Camera Move also show their camera values; Model Polas shows all five prompts in the order they are sent. ✕, a click outside, or Escape closes it
 
 **Prompt Assembler node**
 - Has five fixed input slots in Google framework order: Subject, Location, Camera, Lighting, Style
@@ -216,6 +217,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   ├── GalleryModal.js           ← Full-screen gallery overlay reading all images from gallery-db IndexedDB — BUILT
 │   │   ├── AdFormatPanel.js          ← Checkbox panel for selecting ad formats grouped by platform — BUILT
 │   │   ├── ImageModal.js             ← Full-screen overlay showing generated images with optional labels — BUILT
+│   │   ├── PromptPreviewModal.js     ← Read-only pop-up showing the exact prompt a model node will send (View prompt, backlog #14) — BUILT
 │   │   ├── LogPanel.js               ← Fixed bottom bar showing API responses and errors — BUILT
 │   │   ├── CostPanel.js              ← Cost and budget UI — placeholder
 │   │   └── ContextPanel.js           ← Context mode UI — placeholder
@@ -299,6 +301,14 @@ This document is a plain English map of the codebase. It is updated after every 
 5. On the next graph tick, `getPromptFragment()` reads from `node.values` and the prompt updates live
 6. Below the text fields, the panel renders the Reference Images section
 7. The panel stays open until the user clicks ✕
+
+### When the user clicks "View prompt" on a model node
+1. The button calls `showPromptPreview(title, text)` from `PromptPreviewModal.js`
+2. The text comes from the same helper Generate uses, so the preview can never differ from what is sent:
+   - NB2 / Recraft: `_promptText()` — the text on the node's own Prompt wire if one is plugged in, otherwise the Prompt Assembler's prompt (`getPrompt()` in `apiClient.js`). `_generate` stores it with `setPrompt(this._promptText())`
+   - Qwen / Camera Move: `_promptText()` — the preserve-subject sentence plus the user's own text; `_previewText()` adds the negative prompt (Qwen) and the camera values
+   - Model Polas: `_posePrompt(pose, withFullBody)` builds each pose's prompt; `_previewText()` lists all five, the last four with the "match the second reference image" sentence (as when Full body succeeds). If no Gender is picked the swimwear shows as "(choose Female or Male first)"
+3. The pop-up is built once and reused; the prompt is placed in a read-only text box, so it can be read and copied but not edited
 
 ### When the user clicks "Cost Settings" on the NB2 Model node
 1. `PropertiesPanel.open(this)` opens with the NB2 Model node
@@ -434,6 +444,8 @@ This document is a plain English map of the codebase. It is updated after every 
 **ContextControl.js** — currently disabled. The UI is not built. `getMode()` always returns `'open'`. All other functions (setAnchorImageUrl, resetContext) are preserved for re-enabling later without major changes.
 
 **assembleImages()** — a function in `promptAssembler.js` that runs on every graph tick. Iterates all nodes connected to the Prompt Assembler, collects `{ data, label }` from each node's `images` array, and returns a flat array. The Prompt Assembler passes this to `apiClient.js` via `setReferenceImages()`.
+
+**PromptPreviewModal.js** — a read-only pop-up opened by the View prompt button on every model node (backlog #14). `showPromptPreview(title, text)` shows the node name and the prompt in a read-only, scrollable text box. Built on first use and reused. Closes with ✕, a click on the dark backdrop, or Escape (listened for in the capture phase, because the LiteGraph canvas swallows key presses). It deliberately does not reuse the side Properties panel: that panel's prompt box has the fixed id `prompt-display`, which the Prompt Assembler overwrites every tick.
 
 **ImageModal.js** — a full-screen overlay shown after every successful generation. Accepts an array of `{url, label}` objects. In single mode `label` is `null` and nothing extra is shown. In batch mode `label` is `"Format Name · W×H"` and appears between the thumbnail and the "Open full size" link.
 
