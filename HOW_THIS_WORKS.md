@@ -145,6 +145,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - A small "New Project" button sits fixed in the top-right corner of the canvas
 - Clicking it shows a confirmation dialog — if confirmed, all nodes are cleared from the canvas and IndexedDB is wiped (`saveGraph(null)`)
 - The default Prompt Assembler node is immediately recreated so the canvas is never left empty
+- The graph is then restarted with `graph.start()`, because LiteGraph's `clear()` quietly switches the graph's tick off. Without the restart, nodes stop updating after New Project (backlog #20)
 - When the side panel is open, the button shifts left automatically so it is never hidden behind the panel
 
 **Gallery button and modal**
@@ -270,7 +271,8 @@ This document is a plain English map of the codebase. It is updated after every 
 8. If saved data exists: `graph.configure(saved)` restores all nodes, connections, and custom data
 9. If no saved data: one Prompt Assembler node and one NB2 Model node are created as defaults
 10. A `setInterval` starts auto-saving `graph.serialize()` to IndexedDB every 2 seconds
-11. The graph starts its render and execution loop
+11. `_guardAgainstNodeErrors(graph)` wraps LiteGraph's `runStep`. If a node's `onExecute` crashes, the error is shown once in the log bar and the graph keeps running. LiteGraph's default is to hide the error and stop the whole graph, which freezes every node
+12. The graph starts its render and execution loop. Each "tick" (many times per second) calls `onExecute` on every node, which is how the Prompt Assembler keeps its prompt up to date
 
 ### When the user connects a content node to the Prompt Assembler
 1. On the next graph tick, `onExecute` fires on the Prompt Assembler node
