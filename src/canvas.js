@@ -7,6 +7,7 @@ import { LGraph, LGraphCanvas, LiteGraph } from 'litegraph.js'
 import { saveGraph, loadGraph } from './utils/storageUtils.js'
 import { openSettings } from './panel/SettingsModal.js'
 import { openGallery } from './panel/GalleryModal.js'
+import { log } from './panel/LogPanel.js'
 
 // Import node types — each import registers them with LiteGraph automatically
 import './nodes/PromptAssemblerNode.js'
@@ -135,10 +136,39 @@ export async function initCanvas() {
   // Add the "Gallery" button next to Settings
   _addGalleryButton()
 
+  // Stop one broken node from silently freezing every other node
+  _guardAgainstNodeErrors(graph)
+
   // Start the graph — begins the render loop
   graph.start()
 
   return graph
+}
+
+/**
+ * Keeps the graph running when a node crashes, and shows the error in the log bar.
+ * By default LiteGraph hides the error and switches the whole graph off, so
+ * every node (including the Prompt Assembler) stops updating with no message.
+ */
+function _guardAgainstNodeErrors(graph) {
+  const originalRunStep = graph.runStep.bind(graph)
+
+  // Remembers which errors were already shown — a broken node fails on every
+  // tick (many times per second), so each distinct error is shown only once
+  const alreadyReported = new Set()
+
+  graph.runStep = function (num, _ignored, limit) {
+    try {
+      // "true" tells LiteGraph to let the error reach us instead of stopping
+      originalRunStep(num, true, limit)
+    } catch (err) {
+      const message = 'Node error: ' + (err && err.message ? err.message : err)
+      if (alreadyReported.has(message)) return
+      alreadyReported.add(message)
+      console.error(message, err)
+      log(message, 'error')
+    }
+  }
 }
 
 /**
@@ -191,5 +221,11 @@ function _addNewProjectButton(graph) {
     const assemblerNode = LiteGraph.createNode('prompt/PromptAssembler')
     graph.add(assemblerNode)
     assemblerNode.pos = [300, 200]
+
+    // LiteGraph's clear() quietly switches the graph off (it stops the "tick"
+    // that makes every node update). Without this line, after New Project the
+    // Prompt Assembler never reads its connected nodes again and stays empty
+    // until the page is reloaded (backlog #20).
+    graph.start()
   })
 }
