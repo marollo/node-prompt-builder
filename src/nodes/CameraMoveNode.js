@@ -12,10 +12,15 @@ import { log } from '../panel/LogPanel.js'
 import { buildRequest, parseResponse, waitForPrediction, fetchImageAsBase64 } from '../api/formats/replicate.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
 import { saveToGallery } from '../utils/galleryStore.js'
+import { addSpent } from '../api/CostControl.js'
 import { showPromptPreview } from '../panel/PromptPreviewModal.js'
 
 // Replicate model path — the owner/name slug from the model's URL
 const MODEL_PATH = 'qwen/qwen-edit-multiangle'
+
+// Replicate's published price for this model: $0.03 per output picture (replicate.com, Nov 2026).
+// Each Generate makes one picture, so this is the cost of one run (backlog #12)
+const PRICE_PER_IMAGE = 0.03
 
 // Instruction always sent to the model so it keeps the person unchanged
 // while only the camera angle moves. Any prompt typed in Settings is added after it.
@@ -406,7 +411,9 @@ CameraMoveNode.prototype._generate = async function () {
     img.src        = base64
     this._resultEl = img
 
-    log('Camera Move: image generated successfully (seed ' + this._lastSeed + ').', 'success')
+    // Count this run in Spent and the all-time Total — before this, Camera Move costs were never counted
+    addSpent(PRICE_PER_IMAGE, 'Camera Move')
+    log('Camera Move: image generated successfully (seed ' + this._lastSeed + ') — ~$' + PRICE_PER_IMAGE.toFixed(2) + '.', 'success')
 
   } catch (err) {
     log('Camera Move: request failed — ' + err.message, 'error')

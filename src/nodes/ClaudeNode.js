@@ -8,6 +8,7 @@
 import { LiteGraph } from 'litegraph.js'
 import { describeImage } from '../api/claudeClient.js'
 import { log } from '../panel/LogPanel.js'
+import { addSpent } from '../api/CostControl.js'
 
 // Import every prompt file — the user picks which one applies at runtime
 import subjectPrompt   from '../prompts/subject.md?raw'
@@ -102,6 +103,8 @@ ClaudeNode.prototype._describe = async function () {
   } else {
     this.outputText = result.text
     this.status     = 'done'
+    // Count what this call cost (worked out from the tokens Claude reports) in Spent and the Total (backlog #12)
+    addSpent(result.cost || 0, 'Claude')
   }
 
   this.setDirtyCanvas(true, true)

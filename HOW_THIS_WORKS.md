@@ -17,6 +17,7 @@ This document is a plain English map of the codebase. It is updated after every 
 - Model Polas flow: Image (or any **image** output) → Model Polas → five pictures on the node; its **image** output passes the first one on
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
 - **View prompt** (backlog #14): every model node — NB2, Recraft V4 Pro, Qwen Multi-Angle, Camera Move, Model Polas — has a **View prompt** button (the last button on the node) that opens a read-only pop-up with the exact text Generate would send. Qwen and Camera Move also show their camera values; Model Polas shows all five prompts in the order they are sent. ✕, a click outside, or Escape closes it
+- **Total spent** (backlog #12): a **Total: $…** badge next to Gallery shows the all-time estimated cost of every model used (NB2, Recraft, Qwen, Model Polas, Camera Move, Claude), saved across page reloads; click it for the breakdown per model and a two-click Reset
 
 **Prompt Assembler node**
 - Has five fixed input slots in Google framework order: Subject, Location, Camera, Lighting, Style
@@ -228,7 +229,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   ├── ImageModal.js             ← Full-screen overlay showing generated images with optional labels — BUILT
 │   │   ├── PromptPreviewModal.js     ← Read-only pop-up showing the exact prompt a model node will send (View prompt, backlog #14) — BUILT
 │   │   ├── LogPanel.js               ← Fixed bottom bar showing API responses and errors — BUILT
-│   │   ├── CostPanel.js              ← Cost and budget UI — placeholder
+│   │   ├── CostPanel.js              ← "Total: $…" badge in the top bar + per-model breakdown with a two-click Reset (backlog #12) — BUILT
 │   │   └── ContextPanel.js           ← Context mode UI — placeholder
 │   ├── assembly/
 │   │   └── promptAssembler.js        ← Assembles prompt and reference images from connected nodes — BUILT
@@ -412,7 +413,11 @@ This document is a plain English map of the codebase. It is updated after every 
 
 **nodeOptions.js** — the single source of truth for all dropdown lists. Edit here to change any dropdown in any node.
 
-**CostControl.js** — owns all session cost state. Budget, cooldown, spent amount, and request count are stored in module-level variables so they survive the side panel being closed and reopened. `initCostUI(container)` builds the HTML into the NB2 Model side panel on demand. Exposes `canGenerate()`, `recordGeneration()`, `addSpent(amount)`, `updateEstimate(cost)`, and `getStats()`. `getStats()` returns the current numbers as a plain object so the NB2 Model node can draw them on the canvas without needing the side panel to be open.
+**CostControl.js** — owns all session cost state. Budget, cooldown, spent amount, and request count are stored in module-level variables so they survive the side panel being closed and reopened. `initCostUI(container)` builds the HTML into the NB2 Model side panel on demand. Exposes `canGenerate()`, `recordGeneration()`, `addSpent(amount, model)`, `updateEstimate(cost)`, and `getStats()`. `getStats()` returns the current numbers as a plain object so the NB2 Model node can draw them on the canvas without needing the side panel to be open.
+
+**All-time total (backlog #12)** — `addSpent(amount, model)` also adds the cost to an all-time total per model, saved in the browser's `localStorage` under `total-spent` as `{ "NB2": 0.24, "Claude": 0.0021, … }`, so it survives page reloads (the session "Spent" still starts at $0 each reload). Every model reports its name: **NB2** and **Recraft V4 Pro** (in `apiClient.js`), **Qwen Multi-Angle**, **Model Polas**, **Camera Move** (fixed $0.03 per picture, Replicate's published price — before this it was never counted) and **Claude** (the token cost `claudeClient.js` already worked out, which `ClaudeNode` used to throw away). Costs from Camera Move and Claude now also count toward the session Spent and budget. `getTotals()`, `resetTotals()` and `onTotalsChange(fn)` let `CostPanel.js` read, clear and redraw the total; the callback means this API file never imports screen code.
+
+**CostPanel.js** — the **Total: $…** badge to the right of the Gallery button (created by `initTotalBadge()`, called from `canvas.js`). It updates the moment any model adds a cost. Clicking it opens a box with one line per model (largest first), the total, and a **Reset total** button that needs two clicks (the first turns it red: "Click again to reset"). Amounts under one cent show 4 decimals (e.g. Claude's $0.0021) so they don't look free. These are estimates from published prices, not the providers' actual bills, and they are kept per browser (another browser or port starts at $0).
 
 **falai.js** — the Nano Banana 2 request formatter. Auto-routes between two endpoints based on what is in `_referenceImages`: if images are present it uses `/nano-banana-2/edit` and adds `image_urls` to the request body; otherwise it uses `/nano-banana-2` (text-to-image). Exports `parseResponse()` which returns all image URLs as an array, and `calculateCost(params)` for the resolution-based pricing table.
 

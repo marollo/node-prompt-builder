@@ -295,7 +295,7 @@ ModelPolasNode.prototype._generate = async function () {
   images.forEach((src, i) => saveToGallery(src, `Model Polas – ${labels[i]}`))
   // Only pictures that came back are paid for, so the cost counts those alone
   const cost = calculateCost({ resolution: this._resolution.value, numImages: images.length })
-  addSpent(cost)
+  addSpent(cost, 'Model Polas')
   log(`Model Polas: ${images.length} of ${POSES.length} pictures generated — ~$${cost.toFixed(2)}.`, 'success')
   this._showThumbnails()
 }

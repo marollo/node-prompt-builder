@@ -872,3 +872,77 @@ html, body {
   font: 12px/1.5 monospace;
   white-space: pre-wrap;
 }
+
+/* ─── Total spent badge (backlog #12) ────────────────────────────────────────
+   Sits to the right of the Gallery button. Clicking it opens a small box
+   underneath with the all-time cost per model and a Reset button.
+   ─────────────────────────────────────────────────────────────────────────── */
+#total-spent-btn {
+  position: fixed;
+  top: 12px;
+  left: 178px;
+  z-index: 150;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #888;
+  font-size: 12px;
+  font-family: sans-serif;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+#total-spent-btn:hover {
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+/* The breakdown box — hidden until the badge is clicked */
+#total-spent-box {
+  display: none;
+  position: fixed;
+  top: 44px;
+  left: 178px;
+  z-index: 150;
+  min-width: 220px;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font: 12px sans-serif;
+  color: #ccc;
+}
+
+/* One "model … amount" line */
+.total-spent-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 3px 0;
+}
+
+/* The final Total line stands out with a divider and bold text */
+.total-spent-sum {
+  border-top: 1px solid #3a3a3a;
+  margin-top: 4px;
+  padding-top: 6px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+#total-spent-reset {
+  margin-top: 8px;
+  width: 100%;
+  background: none;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #888;
+  font-size: 11px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+#total-spent-reset:hover {
+  border-color: #f87171;
+  color: #f87171;
+}
