@@ -348,7 +348,7 @@ QwenMultiAngleNode.prototype._generate = async function () {
       this._thumbEls = els
       // Price depends on the output size, which we only know once the pictures have loaded
       const cost = calculateCost(els.map(img => ({ width: img.naturalWidth, height: img.naturalHeight })))
-      addSpent(cost)
+      addSpent(cost, 'Qwen Multi-Angle')
       log(`Qwen Multi-Angle: ${els.length} image(s) generated — ~$${cost.toFixed(3)} (seed ${this._lastSeed}).`, 'success')
       this._setStatus('idle')
     })

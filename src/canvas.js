@@ -7,6 +7,7 @@ import { LGraph, LGraphCanvas, LiteGraph } from 'litegraph.js'
 import { saveGraph, loadGraph } from './utils/storageUtils.js'
 import { openSettings } from './panel/SettingsModal.js'
 import { openGallery } from './panel/GalleryModal.js'
+import { initTotalBadge } from './panel/CostPanel.js'
 import { log } from './panel/LogPanel.js'
 
 // Import node types — each import registers them with LiteGraph automatically
@@ -137,6 +138,8 @@ export async function initCanvas() {
   // Add the "Gallery" button next to Settings
   _addGalleryButton()
 
+  // Add the all-time "Total: $…" badge next to Gallery (backlog #12)
+  initTotalBadge()
   // Stop one broken node from silently freezing every other node
   _guardAgainstNodeErrors(graph)
 

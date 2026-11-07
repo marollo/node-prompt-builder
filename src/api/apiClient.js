@@ -209,7 +209,7 @@ async function _generateSingle(prompt) {
         if (_resultCallback) { _resultCallback(imageUrls); _resultCallback = null }
       }
       const cost = calculateCost(_generationParams)
-      addSpent(cost)
+      addSpent(cost, 'NB2')
       log(`Generated ${imageUrls.length} image(s) — ~$${cost.toFixed(3)} this request`, 'success')
     } else if (_format === 'Recraft V4') {
       const imageUrls = parseRecraftResponse(data)
@@ -219,7 +219,7 @@ async function _generateSingle(prompt) {
         if (_resultCallback) { _resultCallback(imageUrls); _resultCallback = null }
       }
       const cost = calculateRecraftCost()
-      addSpent(cost)
+      addSpent(cost, 'Recraft V4 Pro')
       log(`Generated ${imageUrls.length} image(s) — ~$${cost.toFixed(3)} this request`, 'success')
     }
     recordGeneration()
@@ -272,7 +272,7 @@ async function _generateBatch(prompt) {
         setAnchorImageUrl(imageUrls[0])
       }
       const cost = calculateCost(params)
-      addSpent(cost)
+      addSpent(cost, 'NB2')
       recordGeneration()
       log(`✓ ${format.name} — ~$${cost.toFixed(3)}`, 'success')
     } catch (err) {

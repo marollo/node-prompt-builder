@@ -155,11 +155,13 @@ function getStats() {
 }
 
 /**
- * Adds the cost of a completed generation to the cumulative spend total.
- * Disables Generate if the budget is now reached.
+ * Adds the cost of a completed generation to this session's spend and to the all-time total.
+ * model is the name shown in the Total breakdown (e.g. 'NB2'); disables Generate if the budget is reached.
  */
-function addSpent(amount) {
+function addSpent(amount, model = 'Other') {
   _spent = parseFloat((_spent + amount).toFixed(4))
+  // Also add it to the all-time total that survives page reloads (backlog #12)
+  _addToTotal(model, amount)
 
   const spentEl = document.getElementById('cost-spent')
   if (spentEl) spentEl.textContent = `$${_spent.toFixed(2)}`
@@ -229,4 +231,49 @@ function _startCooldown() {
   _cooldownInterval = setInterval(tick, 1000)
 }
 
-export { initCostUI, canGenerate, recordGeneration, resetSession, updateEstimate, addSpent, getStats }
+// ─── All-time total (backlog #12) ──────────────────────────────────────────────
+// Saved in the browser (localStorage) as { modelName: dollars }, so it survives page reloads.
+// Separate from the session "Spent" above, which starts at $0 on every reload
+
+const TOTALS_KEY = 'total-spent'
+
+// The function to call whenever the total changes (set by CostPanel to refresh its badge)
+let _totalsListener = null
+
+/**
+ * Reads the saved per-model totals; returns an empty object if nothing is saved yet.
+ * Wrapped in try/catch because a blocked or corrupted browser storage must never break the app.
+ */
+function getTotals() {
+  try { return JSON.parse(localStorage.getItem(TOTALS_KEY)) || {} } catch { return {} }
+}
+
+/**
+ * Adds one cost to a model's all-time total, saves it, and tells the badge to refresh.
+ * Called only by addSpent, so every model that records a cost is counted automatically.
+ */
+function _addToTotal(model, amount) {
+  if (!(amount > 0)) return
+  const totals = getTotals()
+  totals[model] = parseFloat(((totals[model] || 0) + amount).toFixed(4))
+  try { localStorage.setItem(TOTALS_KEY, JSON.stringify(totals)) } catch { /* storage full or blocked */ }
+  if (_totalsListener) _totalsListener()
+}
+
+/**
+ * Clears the all-time total. Called by the Reset button in the Total breakdown, after the user confirms.
+ */
+function resetTotals() {
+  try { localStorage.removeItem(TOTALS_KEY) } catch { /* storage blocked */ }
+  if (_totalsListener) _totalsListener()
+}
+
+/**
+ * Registers the one function to call whenever the total changes (CostPanel's badge refresh).
+ * A callback is used so this API file never has to import panel (screen) code.
+ */
+function onTotalsChange(fn) {
+  _totalsListener = fn
+}
+
+export { initCostUI, canGenerate, recordGeneration, resetSession, updateEstimate, addSpent, getStats, getTotals, resetTotals, onTotalsChange }
