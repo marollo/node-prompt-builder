@@ -8,11 +8,12 @@ This document is a plain English map of the codebase. It is updated after every 
 
 - A dark LiteGraph canvas fills the full browser window
 - One node appears on the canvas at startup: **Prompt Assembler** — the user adds whichever model node they need from the search list
-- Sixteen node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, Close-up, Skin, Model Polas, NB2 Model, Recraft V4 Pro, Claude, Camera Move, Qwen Multi-Angle, Image — LiteGraph's built-in nodes are hidden
+- Seventeen node types are available by double-clicking the canvas: Subject, Location, Camera, Lighting, Style/Mood, Prompt Assembler, Ad Format, Close-up, Skin, Head Hair, Model Polas, NB2 Model, Recraft V4 Pro, Claude, Camera Move, Qwen Multi-Angle, Image — LiteGraph's built-in nodes are hidden
 - Standard flow: content nodes → Prompt Assembler → NB2 Model (or Recraft V4 Pro) → API → image modal
 - Chained flow: NB2 Model / Recraft V4 Pro **image** output → Camera Move, Qwen Multi-Angle, Claude, or another NB2 Model's **image** input (the first generated picture is passed along)
 - Close-up flow: NB2 Model **image** → Close-up → its **Prompt** and **image** outputs → another NB2 Model (or only **Prompt** → Recraft V4 Pro, which takes no picture)
 - Skin flow: Image (or NB2 Model **image**) → Skin → its **Prompt** and **image** outputs → NB2 Model's **Prompt** and **image** inputs
+- Head Hair flow: same as Skin — Image (or NB2 Model **image**) → Head Hair → its **Prompt** and **image** outputs → NB2 Model's **Prompt** and **image** inputs
 - Model Polas flow: Image (or any **image** output) → Model Polas → five pictures on the node; its **image** output passes the first one on
 - Batch flow: content nodes → Prompt Assembler → Ad Format → NB2 Model → API (one request per format) → labeled image modal
 - **View prompt** (backlog #14): every model node — NB2, Recraft V4 Pro, Qwen Multi-Angle, Camera Move, Model Polas — has a **View prompt** button (the last button on the node) that opens a read-only pop-up with the exact text Generate would send. Qwen and Camera Move also show their camera values; Model Polas shows all five prompts in the order they are sent. ✕, a click outside, or Escape closes it
@@ -106,6 +107,13 @@ This document is a plain English map of the codebase. It is updated after every 
 - Same sockets as Close-up: one **image** input; outputs **Prompt** and **image** (passed straight through). Wire both into NB2
 - All dropdowns on Keep original → empty prompt → the model node shows "No prompt yet"
 - Choices are saved with the graph (`serialize_widgets = true`)
+
+**Head Hair node** *(Prompt category, search "HeadHair")*
+- Changes only the hair on the person's head: style, colour and length (backlog #17). Built the same way as the Skin node
+- Three dropdowns: **Style** (Straight, Wavy, Curly, Coily, Bob, Pixie, Bun, Ponytail, Braids, Buzz cut, Slicked back), **Colour** (Black … White, incl. Platinum, Auburn, Red, Grey) and **Length** (Shaved, Very short, Short, Chin, Shoulder, Long, Very long). Each starts at **Keep original**, which adds nothing to the prompt
+- Short choice names are written out in full in the prompt (`STYLES` / `LENGTHS` in `HeadHairNode.js`, e.g. Bun → "hair tied up in a bun", Chin → "chin-length hair"), because a bare word is unclear to the model
+- Builds the prompt *"Change ONLY the hair on the head of the person in the reference image: [chosen changes]. Do not change anything else: keep exactly the same face, identity, facial features, skin tone, eyebrows, makeup, pose, body, outfit, lighting and background. Realistic natural hair texture."* — the opposite of Skin, which protects the hair. Eyebrows are named because a new hair colour can tempt the model to recolour them
+- Same sockets as Skin: one **image** input; outputs **Prompt** and **image** (passed straight through). All on Keep original → empty prompt → "No prompt yet". Choices are saved with the graph
 
 **Model Polas node** *(Model category)*
 - From one picture of a model, makes the five plain pictures casting agencies ask for: **Full body**, **Face front**, **Face side**, **Back** and **Side** (backlog #13)
@@ -209,6 +217,7 @@ This document is a plain English map of the codebase. It is updated after every 
 │   │   ├── CameraMoveNode.js         ← Model category node — applies virtual camera orbit/zoom/tilt to an image via Replicate qwen-edit-multiangle; canvas controls + thumbnail — BUILT
 │   │   ├── CloseUpNode.js            ← Prompt category node — preset close-up prompt + "Close-up on" text field; passes its input picture through — BUILT
 │   │   ├── SkinNode.js               ← Prompt category node — skin colour / age / spots dropdowns build a skin-only edit prompt; passes its input picture through — BUILT
+│   │   ├── HeadHairNode.js           ← Prompt category node — hair style / colour / length dropdowns build a hair-only edit prompt; passes its input picture through — BUILT
 │   │   ├── ModelPolasNode.js         ← Model category node — five casting pictures (full body, face front/side, back, side) via fal.ai NB2 edit; Full body made first and used as a second reference — BUILT
 │   │   ├── QwenMultiAngleNode.js     ← Model category node — angle/elevation/zoom camera move via fal.ai Qwen Image Edit 2511 Multiple Angles; canvas controls + thumbnail grid — BUILT
 │   │   └── ReferenceImageNode.js     ← Standalone reference image node — placeholder (not built)

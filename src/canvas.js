@@ -25,6 +25,7 @@ import './nodes/CameraMoveNode.js'
 import './nodes/QwenMultiAngleNode.js'
 import './nodes/CloseUpNode.js'
 import './nodes/SkinNode.js'
+import './nodes/HeadHairNode.js'
 import './nodes/ModelPolasNode.js'
 
 // Remove all built-in LiteGraph node types so only our custom nodes appear
