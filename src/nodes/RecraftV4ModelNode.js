@@ -6,7 +6,7 @@
 
 import { LiteGraph } from 'litegraph.js'
 import { open as openPanel } from '../panel/PropertiesPanel.js'
-import { setPrompt, setGenerationParams, setFormat, setResultCallback, generate } from '../api/apiClient.js'
+import { setPrompt, setGenerationParams, setFormat, setResultCallback, generate, getPrompt } from '../api/apiClient.js'
 import { getStats, updateEstimate } from '../api/CostControl.js'
 import { calculateCost } from '../api/formats/recraftV4.js'
 import { RECRAFT_IMAGE_SIZE, RECRAFT_SAFETY } from '../utils/nodeOptions.js'
@@ -14,6 +14,7 @@ import { fetchAsBase64 } from '../utils/imageUtils.js'
 import { saveToGallery } from '../utils/galleryStore.js'
 import { loadThumbnails, thumbnailGridHeight, drawThumbnailGrid, thumbnailIndexAt } from '../utils/thumbnailUtils.js'
 import { showImage } from '../panel/ImageModal.js'
+import { showPromptPreview } from '../panel/PromptPreviewModal.js'
 
 // Space in pixels around the thumbnail area at the bottom of the node
 const THUMB_MARGIN = 8
@@ -54,11 +55,25 @@ function RecraftV4ModelNode() {
   // Cost Settings button — opens the side panel with budget and cooldown controls
   this.addWidget('button', 'Cost Settings', null, () => openPanel(this))
 
+  // View prompt button — shows the exact text Generate would send (backlog #14).
+  // Added last on purpose: saved settings are matched to widgets by position
+  this.addWidget('button', 'View prompt', null, () => showPromptPreview(RecraftV4ModelNode.title, this._promptText()))
+
   // Internal flag — true when any upstream node has reference images attached
   this._hasReferenceImages = false
 }
 
 RecraftV4ModelNode.title = 'Recraft V4 Pro (fal.ai)'
+
+/**
+ * Returns the prompt this node would send right now.
+ * Uses the text on the node's own Prompt wire (e.g. from a Close-up node) when one is plugged in,
+ * otherwise whatever the Prompt Assembler last stored. Shared by Generate and "View prompt" (backlog #14).
+ */
+RecraftV4ModelNode.prototype._promptText = function () {
+  if (this.inputs[0].link != null) return this.getInputData(0) || ''
+  return getPrompt()
+}
 
 // ─── computeSize ──────────────────────────────────────────────────────────────
 
@@ -98,9 +113,8 @@ RecraftV4ModelNode.prototype._generate = async function () {
   // Re-send this node's own model choice and settings right now. Every model node on the canvas
   // overwrites these shared values on each tick, so without this another model node could win
   this.onExecute()
-  // Use the text arriving on our own Prompt wire (e.g. from a Close-up node) when one is plugged in,
-  // instead of whatever the Prompt Assembler last stored. An empty wired prompt shows "No prompt yet"
-  if (this.inputs[0].link != null) setPrompt(this.getInputData(0) || '')
+  // Store the exact prompt this node will send (see _promptText), so Generate and "View prompt" match
+  setPrompt(this._promptText())
   await generate()
   this._status = 'idle'
   this.size = this.computeSize()
